@@ -1,0 +1,134 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum ChannelType {
+  Telegram
+  Whatsapp
+}
+
+enum ChannelStatus {
+  Connected
+  Connecting
+  Error
+}
+
+model Channel {
+  id        Int           @id @default(autoincrement())
+  projectId Int
+  name      String
+  type      ChannelType
+  status    ChannelStatus
+  accountId String
+  token     String
+  chats     Chat[]
+  approval  Approval[]
+
+  @@unique([projectId, id])
+}
+
+model Chat {
+  id        Int       @id @default(autoincrement())
+  channelId Int
+  channel   Channel   @relation(fields: [channelId], references: [id])
+  contactId Int
+  accountId String
+  messages  Message[]
+}
+
+enum MessageStatus {
+  LbServer
+  Server
+  Device
+  Read
+  Error
+}
+
+model Message {
+  id          Int           @id @default(autoincrement())
+  chatId      Int
+  chat        Chat          @relation(fields: [chatId], references: [id])
+  fromMe      Boolean
+  status      MessageStatus
+  extednalIds Json
+  versions    Content[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Content {
+  id          Int          @id @default(autoincrement())
+  messageId   Int
+  message     Message      @relation(fields: [messageId], references: [id])
+  text        String?
+  attachments Attachment[]
+  buttons     Json?
+}
+
+enum AttachmentType {
+  Audio
+  Document
+  Image
+  Video
+}
+
+model Attachment {
+  id        Int            @id @default(autoincrement())
+  contentId Int
+  content   Content        @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  type      AttachmentType
+  url       String
+  caption   String?
+}
+
+enum WebhookEventType {
+  All
+}
+
+model Webhook {
+  id        Int              @id @default(autoincrement())
+  projectId Int
+  name      String
+  url       String
+  eventType WebhookEventType
+
+  @@unique([projectId, id])
+}
+
+model TemplateMessage {
+  id          Int        @id @default(autoincrement())
+  projectId   Int
+  code        String
+  approval    Approval[]
+  text        String
+  attachments Json
+  buttons     Json
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([projectId, id])
+}
+
+enum ApprovalStatus {
+  Approved
+  Pending
+  Declined
+}
+
+model Approval {
+  channelId  Int
+  channel    Channel         @relation(fields: [channelId], references: [id])
+  templateId Int
+  template   TemplateMessage @relation(fields: [templateId], references: [id])
+  status     ApprovalStatus
+
+  @@id([channelId, templateId])
+}

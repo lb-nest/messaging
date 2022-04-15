@@ -1,4 +1,4 @@
-import { ChannelStatus, ChannelType } from '@prisma/client';
+import { ChannelType } from '@prisma/client';
 import { IsEnum, IsString } from 'class-validator';
 
 export class CreateChannelDto {
@@ -7,12 +7,6 @@ export class CreateChannelDto {
 
   @IsEnum(ChannelType)
   type: ChannelType;
-
-  @IsEnum(ChannelStatus)
-  status: ChannelStatus;
-
-  @IsString()
-  accountId: string;
 
   @IsString()
   token: string;

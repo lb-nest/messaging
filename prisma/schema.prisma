@@ -27,7 +27,6 @@ model Channel {
   name      String
   type      ChannelType
   status    ChannelStatus
-  accountId String
   token     String
   chats     Chat[]
   approval  Approval[]
@@ -40,14 +39,12 @@ model Chat {
   channelId Int
   channel   Channel   @relation(fields: [channelId], references: [id])
   contactId Int
-  accountId String
+  accountId String    @unique
   messages  Message[]
 }
 
 enum MessageStatus {
-  LbServer
-  Server
-  Device
+  Delivered
   Read
   Error
 }
@@ -58,8 +55,8 @@ model Message {
   chat        Chat          @relation(fields: [chatId], references: [id])
   fromMe      Boolean
   status      MessageStatus
-  extednalIds Json
-  versions    Content[]
+  externalIds Json
+  content     Content[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 }
@@ -86,7 +83,7 @@ model Attachment {
   content   Content        @relation(fields: [contentId], references: [id], onDelete: Cascade)
   type      AttachmentType
   url       String
-  caption   String?
+  name      String?
 }
 
 enum WebhookEventType {

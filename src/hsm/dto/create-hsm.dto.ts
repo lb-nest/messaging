@@ -1,6 +1,6 @@
 import { IsOptional, IsString } from 'class-validator';
 
-export class CreateTemplateMessageDto {
+export class CreateHsmDto {
   @IsString()
   code: string;
 

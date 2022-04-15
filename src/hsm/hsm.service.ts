@@ -1,20 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
-import { CreateTemplateMessageDto } from './dto/create-template-message.dto';
-import { UpdateTemplateMessageDto } from './dto/update-template-message.dto';
+import { CreateHsmDto } from './dto/create-hsm.dto';
+import { UpdateHsmDto } from './dto/update-hsm.dto';
 
 @Injectable()
-export class TemplateMessageService {
+export class HsmService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  create(
-    projectId: number,
-    createTemplateMessageDto: CreateTemplateMessageDto,
-  ) {
+  create(projectId: number, createHsmDto: CreateHsmDto) {
     return this.prismaService.templateMessage.create({
       data: {
         projectId,
-        ...createTemplateMessageDto,
+        ...createHsmDto,
       },
     });
   }
@@ -38,11 +35,7 @@ export class TemplateMessageService {
     });
   }
 
-  update(
-    projectId: number,
-    id: number,
-    updateTemplateMessageDto: UpdateTemplateMessageDto,
-  ) {
+  update(projectId: number, id: number, updateHsmDto: UpdateHsmDto) {
     return this.prismaService.templateMessage.update({
       where: {
         projectId_id: {
@@ -50,7 +43,7 @@ export class TemplateMessageService {
           id,
         },
       },
-      data: updateTemplateMessageDto,
+      data: updateHsmDto,
     });
   }
 

@@ -10,9 +10,9 @@ export class TelegramService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async handleWebhook(channelId: number, event: TelegramEventDto) {
-    const message = event.message ?? event.edited_message;
+    const messageFromTelegram = event.message ?? event.edited_message;
 
-    const accountId = String(message.chat.id);
+    const accountId = String(messageFromTelegram.chat.id);
 
     const channel = await this.prismaService.channel.findUnique({
       where: {
@@ -32,7 +32,7 @@ export class TelegramService {
       create: {
         accountId,
         contact: {
-          create: await this.createContact(bot, message),
+          create: await this.createContact(bot, messageFromTelegram),
         },
         channel: {
           connect: {
@@ -40,24 +40,33 @@ export class TelegramService {
           },
         },
       },
-      update: {},
+      update: {
+        isNew: false,
+      },
     });
 
-    const createdMessage = await this.prismaService.message.upsert({
+    if (chat.isNew) {
+      // TODO: notify webhook receiver
+    }
+
+    const message = await this.prismaService.message.upsert({
       where: {
-        externalId: String(message.message_id),
+        externalId: String(messageFromTelegram.message_id),
       },
       create: {
         chatId: chat.id,
-        externalId: String(message.message_id),
+        externalId: String(messageFromTelegram.message_id),
         fromMe: false,
         status: MessageStatus.Delivered,
         content: {
           create: {
             buttons: undefined,
-            text: message.text ?? message.caption,
+            text: messageFromTelegram.text ?? messageFromTelegram.caption,
             attachments: {
-              create: await TelegramApiChannel.createAttachment(bot, message),
+              create: await TelegramApiChannel.createAttachment(
+                bot,
+                messageFromTelegram,
+              ),
             },
           },
         },
@@ -66,9 +75,12 @@ export class TelegramService {
         content: {
           create: {
             buttons: undefined,
-            text: message.text ?? message.caption,
+            text: messageFromTelegram.text ?? messageFromTelegram.caption,
             attachments: {
-              create: await TelegramApiChannel.createAttachment(bot, message),
+              create: await TelegramApiChannel.createAttachment(
+                bot,
+                messageFromTelegram,
+              ),
             },
           },
         },
@@ -99,7 +111,7 @@ export class TelegramService {
       },
     });
 
-    // TODO: notify message received
+    // TODO: notify webhook receiver
 
     return 'ok';
   }

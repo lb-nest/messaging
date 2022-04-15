@@ -48,6 +48,7 @@ model Chat {
   channel   Channel   @relation(fields: [channelId], references: [id])
   contact   Contact?
   accountId String    @unique
+  isNew     Boolean   @default(true)
   messages  Message[]
 }
 
@@ -96,6 +97,9 @@ model Attachment {
 }
 
 enum WebhookEventType {
+  NewChats
+  IncomingMessages
+  OutgoingMessages
   All
 }
 

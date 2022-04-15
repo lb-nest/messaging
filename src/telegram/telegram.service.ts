@@ -12,6 +12,10 @@ export class TelegramService {
   async handleWebhook(channelId: number, event: TelegramEventDto) {
     const messageFromTelegram = event.message ?? event.edited_message;
 
+    if (!messageFromTelegram) {
+      return;
+    }
+
     const accountId = String(messageFromTelegram.chat.id);
 
     const channel = await this.prismaService.channel.findUnique({

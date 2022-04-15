@@ -58,15 +58,15 @@ enum MessageStatus {
 }
 
 model Message {
-  id          Int           @id @default(autoincrement())
-  chatId      Int
-  chat        Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  fromMe      Boolean
-  status      MessageStatus
-  externalIds Json
-  content     Content[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id         Int           @id @default(autoincrement())
+  chatId     Int
+  chat       Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  fromMe     Boolean
+  status     MessageStatus
+  externalId String        @unique
+  content    Content[]
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 }
 
 model Content {

@@ -123,6 +123,10 @@ class Message {
   @IsNumber()
   date: number;
 
+  @Type(() => Message)
+  @ValidateNested()
+  reply_to_message?: Message;
+
   @Type(() => Document)
   @ValidateNested()
   document?: Document;
@@ -158,5 +162,9 @@ export class TelegramEventDto {
 
   @Type(() => Message)
   @ValidateNested()
-  message: Message;
+  message?: Message;
+
+  @Type(() => Message)
+  @ValidateNested()
+  edited_message?: Message;
 }

@@ -9,7 +9,9 @@ export class TelegramService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async handleWebhook(channelId: number, event: TelegramEventDto) {
-    const accountId = String(event.message.chat.id);
+    const message = event.message ?? event.edited_message;
+
+    const accountId = String(message.chat.id);
 
     const channel = await this.prismaService.channel.findUnique({
       where: {
@@ -29,7 +31,7 @@ export class TelegramService {
       create: {
         accountId,
         contact: {
-          create: await this.createContact(bot, event.message),
+          create: await this.createContact(bot, message),
         },
         channel: {
           connect: {
@@ -40,18 +42,32 @@ export class TelegramService {
       update: {},
     });
 
-    const message = await this.prismaService.message.create({
-      data: {
+    const createdMessage = await this.prismaService.message.upsert({
+      where: {
+        externalId: String(message.message_id),
+      },
+      create: {
         chatId: chat.id,
-        externalIds: [event.message.message_id],
+        externalId: String(message.message_id),
         fromMe: false,
         status: MessageStatus.Delivered,
         content: {
           create: {
             buttons: undefined,
-            text: event.message.text ?? event.message.caption,
+            text: message.text ?? message.caption,
             attachments: {
-              create: await this.createAttachment(bot, event.message),
+              create: await this.createAttachment(bot, message),
+            },
+          },
+        },
+      },
+      update: {
+        content: {
+          create: {
+            buttons: undefined,
+            text: message.text ?? message.caption,
+            attachments: {
+              create: await this.createAttachment(bot, message),
             },
           },
         },

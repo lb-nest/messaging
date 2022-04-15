@@ -8,6 +8,6 @@ export class TelegramController {
 
   @Post(':id/webhook')
   handleWebhook(@Param('id') id: string, @Body() event: TelegramEventDto) {
-    this.telegramService.handleWebhook(Number(id), event);
+    return this.telegramService.handleWebhook(Number(id), event);
   }
 }

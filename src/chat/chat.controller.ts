@@ -44,10 +44,21 @@ export class ChatController {
   @UseGuards(JwtAuthGuard)
   @Post(':id/messages')
   createMessage(
+    @Req() req: any,
     @Param('id') id: string,
     @Body() createMessageDto: CreateMessageDto,
   ) {
-    return this.messageService.create(Number(id), createMessageDto);
+    return this.messageService.create(
+      req.user.project.id,
+      Number(id),
+      createMessageDto,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get(':id/messages')
+  fingAllMessages(@Req() req: any, @Param('id') id: string) {
+    return this.messageService.findAll(req.user.project.id, Number(id));
   }
 
   @UseGuards(JwtAuthGuard)

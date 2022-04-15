@@ -11,16 +11,68 @@ export class TelegramApiChannel extends BaseApiChannel {
     this.bot = new TelegramBot(channel.token);
   }
 
-  async sendMessage(chat: Chat, message: IMessage): Promise<string[]> {
-    const ids = [];
+  public static async createAttachment(bot: TelegramBot, message: any) {
+    if (message.audio) {
+      const url = await bot.getFileLink(message.audio.file_id);
+      return {
+        type: AttachmentType.Audio,
+        url,
+        name: message.audio.file_name,
+      };
+    }
+
+    if (message.document) {
+      const url = await bot.getFileLink(message.document.file_id);
+      return {
+        type: AttachmentType.Document,
+        url,
+        name: message.document.file_name,
+      };
+    }
+
+    if (message.photo) {
+      const photo = message.photo.at(-1);
+
+      const url = await bot.getFileLink(photo.file_id);
+      return {
+        type: AttachmentType.Image,
+        url,
+        name: null,
+      };
+    }
+
+    if (message.video) {
+      const url = await bot.getFileLink(message.video.file_id);
+      return {
+        type: AttachmentType.Video,
+        url,
+        name: message.video.file_name,
+      };
+    }
+
+    if (message.voice) {
+      const url = await bot.getFileLink(message.voice.file_id);
+      return {
+        type: AttachmentType.Audio,
+        url,
+        name: null,
+      };
+    }
+  }
+
+  async sendMessage<T>(chat: Chat, message: IMessage): Promise<T[]> {
+    const result = [];
 
     if (message.text) {
-      const result = await this.bot.sendMessage(chat.accountId, message.text);
-      ids.push(String(result.message_id));
+      result.push(
+        await this.bot.sendMessage(chat.accountId, message.text, {
+          reply_markup: undefined,
+        }),
+      );
     }
 
     if (message.attachments.length > 0) {
-      const result = await Promise.all(
+      const messages = await Promise.all(
         message.attachments.map((attachment) => {
           switch (attachment.type) {
             case AttachmentType.Audio:
@@ -40,9 +92,9 @@ export class TelegramApiChannel extends BaseApiChannel {
         }),
       );
 
-      ids.push(...result.map((item) => String(item.message_id)));
+      result.push(...messages);
     }
 
-    return ids;
+    return result;
   }
 }

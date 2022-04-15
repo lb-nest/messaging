@@ -1,7 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotImplementedException } from '@nestjs/common';
+import { MessageStatus } from '@prisma/client';
+import TelegramBot from 'node-telegram-bot-api';
 import { ApiChannelFactory } from 'src/common/api-channel.factory';
+import { TelegramApiChannel } from 'src/common/api-channel/telegram.api-channel';
 import { PrismaService } from 'src/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { UpdateMessageDto } from './dto/update-message.dto';
 
 @Injectable()
 export class MessageService {
@@ -10,42 +14,88 @@ export class MessageService {
     private readonly apiChannelFactory: ApiChannelFactory,
   ) {}
 
-  async create(chatId: number, createMessageDto: CreateMessageDto) {
-    const chat = await this.prismaService.chat.findUnique({
+  async create(
+    projectId: number,
+    chatId: number,
+    createMessageDto: CreateMessageDto,
+  ) {
+    const chat = await this.prismaService.chat.findFirst({
       where: {
         id: chatId,
+        channel: {
+          projectId,
+        },
       },
       include: {
         channel: true,
       },
     });
 
-    const ids = await this.apiChannelFactory
+    const result = await this.apiChannelFactory
       .create(chat.channel)
-      .sendMessage(chat, createMessageDto);
+      .sendMessage<any>(chat, createMessageDto);
 
-    console.log(ids);
-    return;
+    const bot = new TelegramBot(chat.channel.token);
 
-    return this.prismaService.message.create({
-      data: {
-        externalId: '',
-        fromMe: true,
-        status: 'Delivered',
-        chat: {
-          connect: {
-            id: chatId,
-          },
-        },
-        content: {
-          create: {
-            text: createMessageDto.text,
-            attachments: {
-              createMany: {
-                data: createMessageDto.attachments,
+    const messages = await Promise.all(
+      result.map(async (message) =>
+        this.prismaService.message.create({
+          data: {
+            chatId: chat.id,
+            externalId: String(message.message_id),
+            fromMe: true,
+            status: MessageStatus.Delivered,
+            content: {
+              create: {
+                buttons: undefined, // TODO: buttons
+                text: message.text ?? message.caption,
+                attachments: {
+                  create: await TelegramApiChannel.createAttachment(
+                    bot,
+                    message,
+                  ),
+                },
               },
             },
-            buttons: createMessageDto.buttons,
+          },
+          select: {
+            id: true,
+            fromMe: true,
+            status: true,
+            content: {
+              orderBy: {
+                id: 'desc',
+              },
+              take: 1,
+              select: {
+                text: true,
+                attachments: {
+                  select: {
+                    type: true,
+                    url: true,
+                    name: true,
+                  },
+                },
+                buttons: true,
+              },
+            },
+            createdAt: true,
+            updatedAt: true,
+          },
+        }),
+      ),
+    );
+
+    return messages;
+  }
+
+  findAll(projectId: number, chatId: number) {
+    return this.prismaService.message.findMany({
+      where: {
+        chat: {
+          id: chatId,
+          channel: {
+            projectId,
           },
         },
       },
@@ -76,15 +126,15 @@ export class MessageService {
     });
   }
 
-  findAll() {
-    return '';
+  async update(
+    projectId: number,
+    id: number,
+    updateMessageDto: UpdateMessageDto,
+  ) {
+    throw new NotImplementedException();
   }
 
-  update(id: number, updateMessageDto: any) {
-    return '';
-  }
-
-  delete(id: number) {
-    return '';
+  async delete(projectId: number, id: number) {
+    throw new NotImplementedException();
   }
 }

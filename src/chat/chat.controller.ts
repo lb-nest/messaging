@@ -12,11 +12,16 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-chat.dto';
+import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
+import { MessageService } from './message.service';
 
 @Controller('chats')
 export class ChatController {
-  constructor(private readonly chatService: ChatService) {}
+  constructor(
+    private readonly chatService: ChatService,
+    private readonly messageService: MessageService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Post()
@@ -34,6 +39,15 @@ export class ChatController {
   @Get(':id')
   findOne(@Req() req: any, @Param('id') id: string) {
     return this.chatService.findOne(req.user.project.id, Number(id));
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/messages')
+  createMessage(
+    @Param('id') id: string,
+    @Body() createMessageDto: CreateMessageDto,
+  ) {
+    return this.messageService.create(Number(id), createMessageDto);
   }
 
   @UseGuards(JwtAuthGuard)

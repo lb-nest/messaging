@@ -52,6 +52,7 @@ model Chat {
 }
 
 enum MessageStatus {
+  Accepted
   Delivered
   Read
   Error

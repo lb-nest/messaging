@@ -11,14 +11,31 @@ export class TelegramService {
   async handleWebhook(channelId: number, event: TelegramEventDto) {
     const accountId = String(event.message.chat.id);
 
+    const channel = await this.prismaService.channel.findUnique({
+      where: {
+        id: channelId,
+      },
+      select: {
+        token: true,
+      },
+    });
+
+    const bot = new TelegramBot(channel.token);
+
     const chat = await this.prismaService.chat.upsert({
       where: {
         accountId,
       },
       create: {
         accountId,
-        contactId: -1,
-        channelId,
+        contact: {
+          create: await this.createContact(bot, event.message),
+        },
+        channel: {
+          connect: {
+            id: channelId,
+          },
+        },
       },
       update: {},
     });
@@ -34,7 +51,7 @@ export class TelegramService {
             buttons: undefined,
             text: event.message.text ?? event.message.caption,
             attachments: {
-              create: await this.createAttachment(channelId, event.message),
+              create: await this.createAttachment(bot, event.message),
             },
           },
         },
@@ -71,20 +88,9 @@ export class TelegramService {
   }
 
   private async createAttachment(
-    channelId: number,
+    bot: TelegramBot,
     message: TelegramEventDto['message'],
   ) {
-    const channel = await this.prismaService.channel.findUnique({
-      where: {
-        id: channelId,
-      },
-      select: {
-        token: true,
-      },
-    });
-
-    const bot = new TelegramBot(channel.token);
-
     if (message.audio) {
       const url = await bot.getFileLink(message.audio.file_id);
       return {
@@ -131,5 +137,28 @@ export class TelegramService {
         name: null,
       };
     }
+  }
+
+  private async createContact(
+    bot: TelegramBot,
+    message: TelegramEventDto['message'],
+  ) {
+    const user = await bot.getUserProfilePhotos(message.from.id);
+    const photo = user.photos[0]?.at(-1);
+
+    let avatarUrl: string;
+    if (photo) {
+      avatarUrl = await bot.getFileLink(photo.file_id);
+    }
+
+    const name = [message.from.first_name, message.from.last_name]
+      .filter(Boolean)
+      .join(' ');
+
+    return {
+      username: message.from.username,
+      name,
+      avatarUrl,
+    };
   }
 }

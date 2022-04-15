@@ -34,11 +34,19 @@ model Channel {
   @@unique([projectId, id])
 }
 
+model Contact {
+  chatId    Int     @id
+  chat      Chat    @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  username  String
+  name      String
+  avatarUrl String?
+}
+
 model Chat {
   id        Int       @id @default(autoincrement())
   channelId Int
   channel   Channel   @relation(fields: [channelId], references: [id])
-  contactId Int
+  contact   Contact?
   accountId String    @unique
   messages  Message[]
 }
@@ -52,7 +60,7 @@ enum MessageStatus {
 model Message {
   id          Int           @id @default(autoincrement())
   chatId      Int
-  chat        Chat          @relation(fields: [chatId], references: [id])
+  chat        Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
   fromMe      Boolean
   status      MessageStatus
   externalIds Json
@@ -64,7 +72,7 @@ model Message {
 model Content {
   id          Int          @id @default(autoincrement())
   messageId   Int
-  message     Message      @relation(fields: [messageId], references: [id])
+  message     Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
   text        String?
   attachments Attachment[]
   buttons     Json?

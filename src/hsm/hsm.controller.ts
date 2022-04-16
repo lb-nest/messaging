@@ -14,7 +14,7 @@ import { CreateHsmDto } from './dto/create-hsm.dto';
 import { UpdateHsmDto } from './dto/update-hsm.dto';
 import { HsmService } from './hsm.service';
 
-@Controller('template-messages')
+@Controller('hsm')
 export class HsmController {
   constructor(private readonly hsmService: HsmService) {}
 

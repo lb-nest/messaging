@@ -6,6 +6,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
@@ -14,11 +15,11 @@ class Attachment {
   @IsEnum(AttachmentType)
   type: AttachmentType;
 
-  @IsString()
+  @IsUrl()
   url: string;
 
-  @IsString()
   @IsOptional()
+  @IsString()
   name?: string;
 }
 

@@ -99,7 +99,7 @@ model Attachment {
 model TemplateMessage {
   id        Int        @id @default(autoincrement())
   projectId Int
-  code      String     @unique
+  code      String
   approval  Approval[]
   text      String
   buttons   Json?
@@ -107,6 +107,7 @@ model TemplateMessage {
   updatedAt DateTime   @updatedAt
 
   @@unique([projectId, id])
+  @@unique([projectId, code])
 }
 
 enum ApprovalStatus {

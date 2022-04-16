@@ -96,6 +96,7 @@ export class TelegramService {
         },
       },
       update: {
+        updatedAt: new Date(),
         content: {
           create: {
             buttons: undefined,

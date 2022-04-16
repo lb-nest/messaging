@@ -1,5 +1,5 @@
 import { Channel, Chat } from '@prisma/client';
-import { IMessage } from './interfaces/message.interface';
+import { IMessage } from '../interfaces/message.interface';
 
 export abstract class BaseApiChannel {
   constructor(protected readonly channel: Channel) {}

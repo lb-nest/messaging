@@ -1,7 +1,7 @@
 import { AttachmentType, Channel, Chat } from '@prisma/client';
 import TelegramBot from 'node-telegram-bot-api';
 import { BaseApiChannel } from './base.api-channel';
-import { IMessage } from './interfaces/message.interface';
+import { IMessage } from '../interfaces/message.interface';
 
 export class TelegramApiChannel extends BaseApiChannel {
   private readonly bot: TelegramBot;

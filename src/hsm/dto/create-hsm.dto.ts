@@ -1,18 +1,49 @@
-import { IsOptional, IsString } from 'class-validator';
+import { AttachmentType } from '@prisma/client';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  ValidateIf,
+  ValidateNested,
+} from 'class-validator';
+
+class Attachment {
+  @IsEnum(AttachmentType)
+  type: AttachmentType;
+
+  @IsString()
+  url: string;
+
+  @IsString()
+  @IsOptional()
+  name?: string;
+}
 
 export class CreateHsmDto {
-  @IsString()
+  @IsNotEmpty()
+  @Transform(({ value }) => value.trim())
   code: string;
 
-  @IsString()
-  @IsOptional()
-  text: string;
+  @ValidateIf(({ attachments, buttons }) => {
+    if (Array.isArray(attachments) && Array.isArray(buttons)) {
+      return attachments.length === 0 && buttons.length === 0;
+    }
 
-  @IsString()
-  @IsOptional()
-  attachments: any;
+    return true;
+  })
+  @IsNotEmpty()
+  @Transform(({ value }) => value.trim())
+  text?: string;
 
-  @IsString()
+  @Type(() => Attachment)
+  @ValidateNested({ each: true })
+  @IsArray()
+  attachments: Attachment[];
+
+  @IsArray()
   @IsOptional()
-  buttons: any;
+  buttons?: any[];
 }

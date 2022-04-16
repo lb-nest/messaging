@@ -4,8 +4,16 @@ import { ChannelModule } from './channel/channel.module';
 import { ChatModule } from './chat/chat.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { HsmModule } from './hsm/hsm.module';
+import { WebhookModule } from './webhook/webhook.module';
 
 @Module({
-  imports: [AuthModule, ChannelModule, ChatModule, HsmModule, TelegramModule],
+  imports: [
+    AuthModule,
+    ChannelModule,
+    ChatModule,
+    HsmModule,
+    TelegramModule,
+    WebhookModule,
+  ],
 })
 export class AppModule {}

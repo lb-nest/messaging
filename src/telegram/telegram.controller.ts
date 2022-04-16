@@ -6,7 +6,7 @@ import { TelegramService } from './telegram.service';
 export class TelegramController {
   constructor(private readonly telegramService: TelegramService) {}
 
-  @Post(':id/webhook')
+  @Post(':id/events')
   handleWebhook(@Param('id') id: string, @Body() event: TelegramEventDto) {
     return this.telegramService.handleWebhook(Number(id), event);
   }

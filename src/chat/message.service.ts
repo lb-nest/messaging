@@ -1,8 +1,9 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
-import { MessageStatus } from '@prisma/client';
+import { MessageStatus, WebhookEventType } from '@prisma/client';
 import TelegramBot from 'node-telegram-bot-api';
 import { ApiChannelFactory } from 'src/common/api-channel.factory';
 import { TelegramApiChannel } from 'src/common/api-channel/telegram.api-channel';
+import { WebhookDispatcher } from 'src/common/webhook-dispatcher.service';
 import { PrismaService } from 'src/prisma.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -12,6 +13,7 @@ export class MessageService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly apiChannelFactory: ApiChannelFactory,
+    private readonly webhookDispatcher: WebhookDispatcher,
   ) {}
 
   async create(
@@ -62,6 +64,11 @@ export class MessageService {
             id: true,
             fromMe: true,
             status: true,
+            chat: {
+              select: {
+                id: true,
+              },
+            },
             content: {
               orderBy: {
                 id: 'desc',
@@ -86,7 +93,10 @@ export class MessageService {
       ),
     );
 
-    // TODO: notify webhook receiver
+    this.webhookDispatcher.dispatch(projectId, {
+      type: WebhookEventType.OutgoingMessages,
+      payload: messages,
+    });
 
     return messages;
   }
@@ -105,6 +115,11 @@ export class MessageService {
         id: true,
         fromMe: true,
         status: true,
+        chat: {
+          select: {
+            id: true,
+          },
+        },
         content: {
           orderBy: {
             id: 'desc',

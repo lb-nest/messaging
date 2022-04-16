@@ -1,13 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { MessageStatus } from '@prisma/client';
+import { MessageStatus, WebhookEventType } from '@prisma/client';
 import TelegramBot from 'node-telegram-bot-api';
 import { TelegramApiChannel } from 'src/common/api-channel/telegram.api-channel';
+import { WebhookDispatcher } from 'src/common/webhook-dispatcher.service';
 import { PrismaService } from 'src/prisma.service';
 import { TelegramEventDto } from './dto/telegram-event.dto';
 
 @Injectable()
 export class TelegramService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(
+    private readonly prismaService: PrismaService,
+    private readonly webhookDispatcher: WebhookDispatcher,
+  ) {}
 
   async handleWebhook(channelId: number, event: TelegramEventDto) {
     const messageFromTelegram = event.message ?? event.edited_message;
@@ -23,6 +27,7 @@ export class TelegramService {
         id: channelId,
       },
       select: {
+        projectId: true,
         token: true,
       },
     });
@@ -47,10 +52,25 @@ export class TelegramService {
       update: {
         isNew: false,
       },
+      select: {
+        id: true,
+        isNew: true,
+        contact: {
+          select: {
+            username: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        messages: true,
+      },
     });
 
     if (chat.isNew) {
-      // TODO: notify webhook receiver
+      await this.webhookDispatcher.dispatch(channel.projectId, {
+        type: WebhookEventType.NewChats,
+        payload: chat,
+      });
     }
 
     const message = await this.prismaService.message.upsert({
@@ -93,6 +113,11 @@ export class TelegramService {
         id: true,
         fromMe: true,
         status: true,
+        chat: {
+          select: {
+            id: true,
+          },
+        },
         content: {
           orderBy: {
             id: 'desc',
@@ -115,7 +140,10 @@ export class TelegramService {
       },
     });
 
-    // TODO: notify webhook receiver
+    await this.webhookDispatcher.dispatch(channel.projectId, {
+      type: WebhookEventType.IncomingMessages,
+      payload: [message],
+    });
 
     return 'ok';
   }

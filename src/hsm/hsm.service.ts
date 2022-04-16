@@ -13,6 +13,25 @@ export class HsmService {
         projectId,
         ...createHsmDto,
       },
+      select: {
+        code: true,
+        text: true,
+        buttons: true,
+        approval: {
+          select: {
+            channel: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+              },
+            },
+            status: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 
@@ -20,6 +39,25 @@ export class HsmService {
     return this.prismaService.templateMessage.findMany({
       where: {
         projectId,
+      },
+      select: {
+        code: true,
+        text: true,
+        buttons: true,
+        approval: {
+          select: {
+            channel: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+              },
+            },
+            status: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
       },
     });
   }
@@ -31,6 +69,25 @@ export class HsmService {
           projectId,
           id,
         },
+      },
+      select: {
+        code: true,
+        text: true,
+        buttons: true,
+        approval: {
+          select: {
+            channel: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+              },
+            },
+            status: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
       },
     });
   }
@@ -44,6 +101,25 @@ export class HsmService {
         },
       },
       data: updateHsmDto,
+      select: {
+        code: true,
+        text: true,
+        buttons: true,
+        approval: {
+          select: {
+            channel: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+              },
+            },
+            status: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
     });
   }
 
@@ -54,6 +130,25 @@ export class HsmService {
           projectId,
           id,
         },
+      },
+      select: {
+        code: true,
+        text: true,
+        buttons: true,
+        approval: {
+          select: {
+            channel: {
+              select: {
+                id: true,
+                name: true,
+                type: true,
+              },
+            },
+            status: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
       },
     });
   }

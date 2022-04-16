@@ -96,33 +96,15 @@ model Attachment {
   name      String?
 }
 
-enum WebhookEventType {
-  NewChats
-  IncomingMessages
-  OutgoingMessages
-  All
-}
-
-model Webhook {
-  id        Int              @id @default(autoincrement())
-  projectId Int
-  name      String
-  url       String
-  eventType WebhookEventType
-
-  @@unique([projectId, id])
-}
-
 model TemplateMessage {
-  id          Int        @id @default(autoincrement())
-  projectId   Int
-  code        String
-  approval    Approval[]
-  text        String
-  attachments Json
-  buttons     Json
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id        Int        @id @default(autoincrement())
+  projectId Int
+  code      String     @unique
+  approval  Approval[]
+  text      String
+  buttons   Json?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   @@unique([projectId, id])
 }
@@ -141,4 +123,21 @@ model Approval {
   status     ApprovalStatus
 
   @@id([channelId, templateId])
+}
+
+enum WebhookEventType {
+  NewChats
+  IncomingMessages
+  OutgoingMessages
+  All
+}
+
+model Webhook {
+  id        Int              @id @default(autoincrement())
+  projectId Int
+  name      String
+  url       String
+  eventType WebhookEventType
+
+  @@unique([projectId, id])
 }

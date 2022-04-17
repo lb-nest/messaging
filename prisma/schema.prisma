@@ -47,9 +47,11 @@ model Chat {
   channelId Int
   channel   Channel   @relation(fields: [channelId], references: [id])
   contact   Contact?
-  accountId String    @unique
+  accountId String
   isNew     Boolean   @default(true)
   messages  Message[]
+
+  @@unique([channelId, accountId])
 }
 
 enum MessageStatus {

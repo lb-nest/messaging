@@ -36,7 +36,10 @@ export class TelegramService {
 
     const chat = await this.prismaService.chat.upsert({
       where: {
-        accountId,
+        channelId_accountId: {
+          channelId,
+          accountId,
+        },
       },
       create: {
         accountId,

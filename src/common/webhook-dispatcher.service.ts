@@ -19,7 +19,7 @@ export class WebhookDispatcher {
     });
 
     await Promise.allSettled(
-      webhooks.map((webhook) => axios.post(webhook.url, event.payload)),
+      webhooks.map((webhook) => axios.post(webhook.url, event)),
     );
   }
 }

@@ -113,9 +113,9 @@ model TemplateMessage {
 }
 
 enum ApprovalStatus {
+  Requested
   Approved
-  Pending
-  Declined
+  Rejected
 }
 
 model Approval {

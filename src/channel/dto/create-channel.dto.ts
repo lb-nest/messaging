@@ -1,13 +1,16 @@
 import { ChannelType } from '@prisma/client';
-import { IsEnum, IsString } from 'class-validator';
+import { Transform, TransformFnParams } from 'class-transformer';
+import { IsEnum, IsNotEmpty } from 'class-validator';
 
 export class CreateChannelDto {
-  @IsString()
+  @IsNotEmpty()
+  @Transform(({ value }: TransformFnParams) => value.trim())
   name: string;
 
   @IsEnum(ChannelType)
   type: ChannelType;
 
-  @IsString()
+  @IsNotEmpty()
+  @Transform(({ value }: TransformFnParams) => value.trim())
   token: string;
 }

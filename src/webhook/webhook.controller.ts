@@ -6,10 +6,10 @@ import {
   Param,
   Patch,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { User } from 'src/auth/user.decorator';
 import { CreateWebhookDto } from './dto/create-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
 import { WebhookService } from './webhook.service';
@@ -20,31 +20,31 @@ export class WebhookController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Req() req: any, @Body() createWebhookDto: CreateWebhookDto) {
-    return this.webhookService.create(req.user.project.id, createWebhookDto);
+  create(@User() user: any, @Body() createWebhookDto: CreateWebhookDto) {
+    return this.webhookService.create(user.project.id, createWebhookDto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  findAll(@Req() req: any) {
-    return this.webhookService.findAll(req.user.project.id);
+  findAll(@User() user: any) {
+    return this.webhookService.findAll(user.project.id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  findOne(@Req() req: any, @Param('id') id: string) {
-    return this.webhookService.findOne(req.user.project.id, Number(id));
+  findOne(@User() user: any, @Param('id') id: string) {
+    return this.webhookService.findOne(user.project.id, Number(id));
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
-    @Req() req: any,
+    @User() user: any,
     @Param('id') id: string,
     @Body() updateWebhookDto: UpdateWebhookDto,
   ) {
     return this.webhookService.update(
-      req.user.project.id,
+      user.project.id,
       Number(id),
       updateWebhookDto,
     );
@@ -52,7 +52,7 @@ export class WebhookController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  delete(@Req() req: any, @Param('id') id: string) {
-    return this.webhookService.delete(req.user.project.id, Number(id));
+  delete(@User() user: any, @Param('id') id: string) {
+    return this.webhookService.delete(user.project.id, Number(id));
   }
 }

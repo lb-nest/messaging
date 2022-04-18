@@ -6,9 +6,9 @@ import {
   Param,
   Patch,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
+import { User } from 'src/auth/user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChannelService } from './channel.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
@@ -20,31 +20,31 @@ export class ChannelController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Req() req: any, @Body() createChannelDto: CreateChannelDto) {
-    return this.channelService.create(req.user.project.id, createChannelDto);
+  create(@User() user: any, @Body() createChannelDto: CreateChannelDto) {
+    return this.channelService.create(user.project.id, createChannelDto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  findAll(@Req() req: any) {
-    return this.channelService.findAll(req.user.project.id);
+  findAll(@User() user: any) {
+    return this.channelService.findAll(user.project.id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  findOne(@Req() req: any, @Param('id') id: string) {
-    return this.channelService.findOne(req.user.project.id, Number(id));
+  findOne(@User() user: any, @Param('id') id: string) {
+    return this.channelService.findOne(user.project.id, Number(id));
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
-    @Req() req: any,
+    @User() user: any,
     @Param('id') id: string,
     @Body() updateChannelDto: UpdateChannelDto,
   ) {
     return this.channelService.update(
-      req.user.project.id,
+      user.project.id,
       Number(id),
       updateChannelDto,
     );
@@ -52,7 +52,7 @@ export class ChannelController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  delete(@Req() req: any, @Param('id') id: string) {
-    return this.channelService.delete(req.user.project.id, Number(id));
+  delete(@User() user: any, @Param('id') id: string) {
+    return this.channelService.delete(user.project.id, Number(id));
   }
 }

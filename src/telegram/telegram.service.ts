@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { MessageStatus, WebhookEventType } from '@prisma/client';
 import TelegramBot from 'node-telegram-bot-api';
-import { TelegramApiChannel } from 'src/common/api-channel/telegram.api-channel';
-import { WebhookDispatcher } from 'src/common/webhook-dispatcher.service';
+import { TelegramApiChannel } from 'src/chat/api-channel/telegram.api-channel';
 import { PrismaService } from 'src/prisma.service';
+import { WebhookDispatcher } from 'src/shared/webhook-dispatcher.service';
 import { TelegramEventDto } from './dto/telegram-event.dto';
 
 @Injectable()
@@ -13,7 +13,7 @@ export class TelegramService {
     private readonly webhookDispatcher: WebhookDispatcher,
   ) {}
 
-  async handleWebhook(channelId: number, event: TelegramEventDto) {
+  async handleEvents(channelId: number, event: TelegramEventDto) {
     const messageFromTelegram = event.message ?? event.edited_message;
 
     if (!messageFromTelegram) {

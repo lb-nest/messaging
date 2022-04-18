@@ -6,9 +6,9 @@ import {
   Param,
   Patch,
   Post,
-  Req,
   UseGuards,
 } from '@nestjs/common';
+import { User } from 'src/auth/user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-chat.dto';
@@ -25,31 +25,31 @@ export class ChatController {
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  create(@Req() req: any, @Body() createChatDto: CreateChatDto) {
-    return this.chatService.create(req.user.project.id, createChatDto);
+  create(@User() user: any, @Body() createChatDto: CreateChatDto) {
+    return this.chatService.create(user.project.id, createChatDto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  findAll(@Req() req: any) {
-    return this.chatService.findAll(req.user.project.id);
+  findAll(@User() user: any) {
+    return this.chatService.findAll(user.project.id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Get(':id')
-  findOne(@Req() req: any, @Param('id') id: string) {
-    return this.chatService.findOne(req.user.project.id, Number(id));
+  findOne(@User() user: any, @Param('id') id: string) {
+    return this.chatService.findOne(user.project.id, Number(id));
   }
 
   @UseGuards(JwtAuthGuard)
   @Post(':id/messages')
   createMessage(
-    @Req() req: any,
+    @User() user: any,
     @Param('id') id: string,
     @Body() createMessageDto: CreateMessageDto,
   ) {
     return this.messageService.create(
-      req.user.project.id,
+      user.project.id,
       Number(id),
       createMessageDto,
     );
@@ -57,27 +57,23 @@ export class ChatController {
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/messages')
-  fingAllMessages(@Req() req: any, @Param('id') id: string) {
-    return this.messageService.findAll(req.user.project.id, Number(id));
+  fingAllMessages(@User() user: any, @Param('id') id: string) {
+    return this.messageService.findAll(user.project.id, Number(id));
   }
 
   @UseGuards(JwtAuthGuard)
   @Patch(':id')
   update(
-    @Req() req: any,
+    @User() user: any,
     @Param('id') id: string,
     @Body() updateChatDto: UpdateChatDto,
   ) {
-    return this.chatService.update(
-      req.user.project.id,
-      Number(id),
-      updateChatDto,
-    );
+    return this.chatService.update(user.project.id, Number(id), updateChatDto);
   }
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  delete(@Req() req: any, @Param('id') id: string) {
-    return this.chatService.delete(req.user.project.id, Number(id));
+  delete(@User() user: any, @Param('id') id: string) {
+    return this.chatService.delete(user.project.id, Number(id));
   }
 }

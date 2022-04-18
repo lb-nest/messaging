@@ -12,7 +12,7 @@ import { JwtStrategy } from './jwt.strategy';
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: (config: ConfigService) => ({
-        secret: config.get('JWT_SECRET_OR_KEY'),
+        secret: config.get<string>('JWT_SECRET_OR_KEY'),
       }),
       inject: [ConfigService],
     }),

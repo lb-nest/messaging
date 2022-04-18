@@ -1,8 +1,10 @@
 import { WebhookEventType } from '@prisma/client';
-import { IsEnum, IsString, IsUrl } from 'class-validator';
+import { Transform, TransformFnParams } from 'class-transformer';
+import { IsEnum, IsNotEmpty, IsUrl } from 'class-validator';
 
 export class CreateWebhookDto {
-  @IsString()
+  @IsNotEmpty()
+  @Transform(({ value }: TransformFnParams) => value.trim())
   name: string;
 
   @IsUrl()

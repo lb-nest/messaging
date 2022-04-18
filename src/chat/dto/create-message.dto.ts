@@ -7,7 +7,6 @@ import {
   IsOptional,
   IsString,
   IsUrl,
-  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 
@@ -24,13 +23,7 @@ class Attachment {
 }
 
 export class CreateMessageDto {
-  @ValidateIf(({ attachments, buttons }) => {
-    if (Array.isArray(attachments) && Array.isArray(buttons)) {
-      return attachments.length === 0 && buttons.length === 0;
-    }
-
-    return true;
-  })
+  @IsOptional()
   @IsNotEmpty()
   @Transform(({ value }) => value.trim())
   text?: string;
@@ -40,7 +33,7 @@ export class CreateMessageDto {
   @IsArray()
   attachments: Attachment[];
 
-  @IsArray()
   @IsOptional()
+  @IsArray()
   buttons?: any[];
 }

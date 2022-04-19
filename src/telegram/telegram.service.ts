@@ -71,7 +71,7 @@ export class TelegramService {
 
     if (chat.isNew) {
       await this.webhookDispatcher.dispatch(channel.projectId, {
-        type: WebhookEventType.NewChats,
+        type: WebhookEventType.IncomingChats,
         payload: chat,
       });
     }

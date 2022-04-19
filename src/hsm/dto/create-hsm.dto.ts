@@ -12,5 +12,6 @@ export class CreateHsmDto {
 
   @IsOptional()
   @IsArray()
+  @Transform(({ value }) => value ?? undefined)
   buttons?: any[];
 }

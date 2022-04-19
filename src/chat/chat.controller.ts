@@ -15,6 +15,7 @@ import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
+import { UpdateMessageDto } from './dto/update-message.dto';
 import { MessageService } from './message.service';
 
 @Controller('chats')
@@ -61,8 +62,28 @@ export class ChatController {
 
   @UseGuards(JwtAuthGuard)
   @Get(':id/messages')
-  fingAllMessages(@User() user: any, @Param('id') id: string) {
+  findAllMessages(@User() user: any, @Param('id') id: string) {
     return this.messageService.findAll(user.project.id, Number(id));
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':chatId/messages/:id')
+  updateMessage(
+    @User() user: any,
+    @Param('id') id: string,
+    @Body() updateMessageDto: UpdateMessageDto,
+  ) {
+    return this.messageService.update(
+      user.project.id,
+      Number(id),
+      updateMessageDto,
+    );
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':chatId/messages/:id')
+  deleteMessage(@User() user: any, @Param('id') id: string) {
+    return this.messageService.delete(user.project.id, Number(id));
   }
 
   @UseGuards(JwtAuthGuard)

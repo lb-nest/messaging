@@ -1,6 +1,4 @@
-import { PartialType, PickType } from '@nestjs/mapped-types';
+import { PartialType } from '@nestjs/mapped-types';
 import { CreateWebhookDto } from './create-webhook.dto';
 
-export class UpdateWebhookDto extends PickType(PartialType(CreateWebhookDto), [
-  'name',
-]) {}
+export class UpdateWebhookDto extends PartialType(CreateWebhookDto) {}

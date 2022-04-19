@@ -35,7 +35,7 @@ export class ChatService {
     throw new NotImplementedException();
   }
 
-  findAll(projectId: number, ids?: number[]) {
+  async findAll(projectId: number, ids?: number[]) {
     return this.prismaService.chat.findMany({
       where: {
         id: {
@@ -88,7 +88,7 @@ export class ChatService {
     });
   }
 
-  findOne(projectId: number, id: number) {
+  async findOne(projectId: number, id: number) {
     return this.prismaService.chat.findFirst({
       where: {
         id,
@@ -139,11 +139,23 @@ export class ChatService {
     });
   }
 
-  update(projectId: number, id: number, updateChatDto: UpdateChatDto) {
-    throw new NotImplementedException();
+  async update(projectId: number, id: number, updateChatDto: UpdateChatDto) {
+    await this.prismaService.contact.updateMany({
+      where: {
+        chat: {
+          id,
+          channel: {
+            projectId,
+          },
+        },
+      },
+      data: updateChatDto,
+    });
+
+    return this.findOne(projectId, id);
   }
 
-  delete(projectId: number, id: number) {
+  async delete(projectId: number, id: number) {
     return this.prismaService.chat.deleteMany({
       where: {
         id,

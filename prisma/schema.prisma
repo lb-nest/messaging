@@ -129,7 +129,8 @@ model Approval {
 }
 
 enum WebhookEventType {
-  NewChats
+  IncomingChats
+  OutgoingChats
   IncomingMessages
   OutgoingMessages
   All

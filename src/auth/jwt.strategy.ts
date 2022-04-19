@@ -11,15 +11,16 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       passReqToCallback: true,
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get('JWT_SECRET_OR_KEY'),
+      secretOrKey: configService.get('JWT_SECRET'),
     });
   }
 
   async validate(req: any, payload: any) {
     const url = this.configService.get<string>('AUTH_URL');
+
     try {
       await axios.post(
-        url.concat(`/auth/projects/${payload.project.id}/token/verify`),
+        url.concat('/auth/projects/@me/token/verify'),
         undefined,
         {
           headers: {

@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { User } from 'src/auth/user.decorator';
@@ -31,8 +32,11 @@ export class ChatController {
 
   @UseGuards(JwtAuthGuard)
   @Get()
-  findAll(@User() user: any) {
-    return this.chatService.findAll(user.project.id);
+  findAll(@User() user: any, @Query('ids') ids?: string) {
+    return this.chatService.findAll(
+      user.project.id,
+      ids?.split(',').map(Number),
+    );
   }
 
   @UseGuards(JwtAuthGuard)

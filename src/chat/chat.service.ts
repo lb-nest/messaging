@@ -35,9 +35,12 @@ export class ChatService {
     throw new NotImplementedException();
   }
 
-  findAll(projectId: number) {
+  findAll(projectId: number, ids?: number[]) {
     return this.prismaService.chat.findMany({
       where: {
+        id: {
+          in: ids,
+        },
         channel: {
           projectId,
         },

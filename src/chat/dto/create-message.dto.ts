@@ -1,5 +1,5 @@
 import { AttachmentType } from '@prisma/client';
-import { Transform, Type } from 'class-transformer';
+import { Transform, TransformFnParams, Type } from 'class-transformer';
 import {
   IsArray,
   IsEnum,
@@ -35,5 +35,6 @@ export class CreateMessageDto {
 
   @IsOptional()
   @IsArray()
+  @Transform(({ value }: TransformFnParams) => value ?? undefined)
   buttons?: any[];
 }

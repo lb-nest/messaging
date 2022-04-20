@@ -1,18 +1,17 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
-import { ChannelType, WebhookEventType } from '@prisma/client';
+import { WebhookEventType } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
+import { ApiChannelRepository } from 'src/shared/api-channel.repository';
 import { WebhookSenderService } from 'src/shared/webhook-sender.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
-import { TelegramStrategy } from './telegram.strategy';
-import { WebchatStrategy } from './webchat.strategy';
-import { WhatsappStrategy } from './whatsapp.strategy';
 
 @Injectable()
 export class MessageService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly webhookSenderService: WebhookSenderService,
+    private readonly apiChannelRepository: ApiChannelRepository,
   ) {}
 
   async create(
@@ -32,13 +31,7 @@ export class MessageService {
       },
     });
 
-    const channels = {
-      [ChannelType.Telegram]: TelegramStrategy,
-      [ChannelType.Webchat]: WebchatStrategy,
-      [ChannelType.Whatsapp]: WhatsappStrategy,
-    };
-
-    const channel = new channels[chat.channel.type](
+    const channel = new this.apiChannelRepository[chat.channel.type](
       chat.channel,
       this.prismaService,
     );

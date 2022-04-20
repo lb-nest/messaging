@@ -1,33 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ChannelType } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
+import { ApiChannelRepository } from 'src/shared/api-channel.repository';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
-import { TelegramStrategy } from './telegram.strategy';
-import { WebchatStrategy } from './webchat.strategy';
-import { WhatsappStrategy } from './whatsapp.strategy';
 
 @Injectable()
 export class ChannelService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
+    private readonly apiChannelRepository: ApiChannelRepository,
   ) {}
 
   async create(projectId: number, createChannelDto: CreateChannelDto) {
-    const strategies = {
-      [ChannelType.Telegram]: TelegramStrategy,
-      [ChannelType.Webchat]: WebchatStrategy,
-      [ChannelType.Whatsapp]: WhatsappStrategy,
-    };
-
-    const strategy = new strategies[createChannelDto.type](
+    return this.apiChannelRepository[createChannelDto.type].create(
       this.prismaService,
       this.configService,
+      projectId,
+      createChannelDto,
     );
-
-    return strategy.create(projectId, createChannelDto);
   }
 
   findAll(projectId: number) {

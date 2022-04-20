@@ -1,11 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import {
-  AttachmentType,
-  MessageStatus,
-  WebhookEventType,
-} from '@prisma/client';
+import { MessageStatus, WebhookEventType } from '@prisma/client';
 import TelegramBot from 'node-telegram-bot-api';
 import { PrismaService } from 'src/prisma.service';
+import { TelegramApiChannel } from 'src/shared/telegram.api-channel';
 import { WebhookSenderService } from 'src/shared/webhook-sender.service';
 import { TelegramEventDto } from './dto/telegram-event.dto';
 
@@ -47,7 +44,10 @@ export class TelegramService {
       create: {
         accountId,
         contact: {
-          create: await this.createContact(bot, messageFromTelegram),
+          create: await TelegramApiChannel.createContact(
+            bot,
+            messageFromTelegram,
+          ),
         },
         channel: {
           connect: {
@@ -91,7 +91,10 @@ export class TelegramService {
           create: {
             text: messageFromTelegram.text ?? messageFromTelegram.caption,
             attachments: {
-              create: await this.createAttachment(bot, messageFromTelegram),
+              create: await TelegramApiChannel.createAttachment(
+                bot,
+                messageFromTelegram,
+              ),
             },
             buttons: undefined,
           },
@@ -104,7 +107,10 @@ export class TelegramService {
           create: {
             text: messageFromTelegram.text ?? messageFromTelegram.caption,
             attachments: {
-              create: await this.createAttachment(bot, messageFromTelegram),
+              create: await TelegramApiChannel.createAttachment(
+                bot,
+                messageFromTelegram,
+              ),
             },
             buttons: undefined,
           },
@@ -147,80 +153,5 @@ export class TelegramService {
     });
 
     return 'ok';
-  }
-
-  private async createContact(
-    bot: TelegramBot,
-    msg: TelegramEventDto['message'],
-  ) {
-    const user = await bot.getUserProfilePhotos(msg.from.id);
-    const photo = user.photos[0]?.at(-1);
-
-    let avatarUrl: string;
-    if (photo) {
-      avatarUrl = await bot.getFileLink(photo.file_id);
-    }
-
-    const name = [msg.from.first_name, msg.from.last_name]
-      .filter(Boolean)
-      .join(' ');
-
-    return {
-      username: msg.from.username,
-      name,
-      avatarUrl,
-    };
-  }
-
-  private async createAttachment(
-    bot: TelegramBot,
-    msg: TelegramEventDto['message'],
-  ) {
-    if (msg.audio) {
-      const url = await bot.getFileLink(msg.audio.file_id);
-      return {
-        type: AttachmentType.Audio,
-        url,
-        name: msg.audio.file_name,
-      };
-    }
-
-    if (msg.document) {
-      const url = await bot.getFileLink(msg.document.file_id);
-      return {
-        type: AttachmentType.Document,
-        url,
-        name: msg.document.file_name,
-      };
-    }
-
-    if (msg.photo) {
-      const photo = msg.photo.at(-1);
-
-      const url = await bot.getFileLink(photo.file_id);
-      return {
-        type: AttachmentType.Image,
-        url,
-        name: null,
-      };
-    }
-
-    if (msg.video) {
-      const url = await bot.getFileLink(msg.video.file_id);
-      return {
-        type: AttachmentType.Video,
-        url,
-        name: msg.video.file_name,
-      };
-    }
-
-    if (msg.voice) {
-      const url = await bot.getFileLink(msg.voice.file_id);
-      return {
-        type: AttachmentType.Audio,
-        url,
-        name: null,
-      };
-    }
   }
 }

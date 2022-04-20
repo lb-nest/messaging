@@ -1,16 +1,9 @@
-import { ConfigService } from '@nestjs/config';
 import { ChannelStatus } from '@prisma/client';
 import TelegramBot from 'node-telegram-bot-api';
-import { PrismaService } from 'src/prisma.service';
 import { ChannelStrategy } from './channel.strategy';
 import { CreateChannelDto } from './dto/create-channel.dto';
 
-export class TelegramStrategy implements ChannelStrategy {
-  constructor(
-    protected readonly prismaService: PrismaService,
-    protected readonly configService: ConfigService,
-  ) {}
-
+export class TelegramStrategy extends ChannelStrategy {
   async create(
     projectId: number,
     createChannelDto: CreateChannelDto,

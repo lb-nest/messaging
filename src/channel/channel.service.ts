@@ -1,8 +1,7 @@
-import { Injectable, NotImplementedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChannelType } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
-import { ChannelContext } from './channel.context';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
 import { TelegramStrategy } from './telegram.strategy';
@@ -14,34 +13,21 @@ export class ChannelService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
-    private readonly context: ChannelContext,
   ) {}
 
   async create(projectId: number, createChannelDto: CreateChannelDto) {
-    switch (createChannelDto.type) {
-      case ChannelType.Telegram:
-        this.context.setStrategy(
-          new TelegramStrategy(this.prismaService, this.configService),
-        );
-        break;
+    const strategies = {
+      [ChannelType.Telegram]: TelegramStrategy,
+      [ChannelType.Webchat]: WebchatStrategy,
+      [ChannelType.Whatsapp]: WhatsappStrategy,
+    };
 
-      case ChannelType.Webchat:
-        this.context.setStrategy(
-          new WebchatStrategy(this.prismaService, this.configService),
-        );
-        break;
+    const strategy = new strategies[createChannelDto.type](
+      this.prismaService,
+      this.configService,
+    );
 
-      case ChannelType.Whatsapp:
-        this.context.setStrategy(
-          new WhatsappStrategy(this.prismaService, this.configService),
-        );
-        break;
-
-      default:
-        throw new NotImplementedException();
-    }
-
-    return this.context.create(projectId, createChannelDto);
+    return strategy.create(projectId, createChannelDto);
   }
 
   findAll(projectId: number) {

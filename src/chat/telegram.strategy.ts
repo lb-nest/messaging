@@ -4,10 +4,11 @@ import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
 import { PrismaService } from 'src/prisma.service';
 import { ChannelStrategy } from './channel.strategy';
 
-export class TelegramStrategy implements ChannelStrategy {
+export class TelegramStrategy extends ChannelStrategy {
   private readonly bot: TelegramBot;
 
-  constructor(channel: Channel, private readonly prismaService: PrismaService) {
+  constructor(channel: Channel, prismaService: PrismaService) {
+    super(channel, prismaService);
     this.bot = new TelegramBot(channel.token);
   }
 

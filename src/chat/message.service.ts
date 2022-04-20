@@ -2,7 +2,6 @@ import { Injectable, NotImplementedException } from '@nestjs/common';
 import { ChannelType, WebhookEventType } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { WebhookSenderService } from 'src/shared/webhook-sender.service';
-import { ChannelContext } from './channel.context';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
 import { TelegramStrategy } from './telegram.strategy';
@@ -14,7 +13,6 @@ export class MessageService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly webhookSenderService: WebhookSenderService,
-    private readonly context: ChannelContext,
   ) {}
 
   async create(
@@ -34,30 +32,18 @@ export class MessageService {
       },
     });
 
-    switch (chat.channel.type) {
-      case ChannelType.Telegram:
-        this.context.setStrategy(
-          new TelegramStrategy(chat.channel, this.prismaService),
-        );
-        break;
+    const channels = {
+      [ChannelType.Telegram]: TelegramStrategy,
+      [ChannelType.Webchat]: WebchatStrategy,
+      [ChannelType.Whatsapp]: WhatsappStrategy,
+    };
 
-      case ChannelType.Webchat:
-        this.context.setStrategy(
-          new WebchatStrategy(chat.channel, this.prismaService),
-        );
-        break;
+    const channel = new channels[chat.channel.type](
+      chat.channel,
+      this.prismaService,
+    );
 
-      case ChannelType.Whatsapp:
-        this.context.setStrategy(
-          new WhatsappStrategy(chat.channel, this.prismaService),
-        );
-        break;
-
-      default:
-        throw new NotImplementedException();
-    }
-
-    const messages = await this.context.send(chat, createMessageDto);
+    const messages = await channel.send(chat, createMessageDto);
 
     this.webhookSenderService.dispatch(projectId, {
       type: WebhookEventType.OutgoingMessages,

@@ -1,18 +1,17 @@
 import { AttachmentType, Channel, Chat, MessageStatus } from '@prisma/client';
 import TelegramBot from 'node-telegram-bot-api';
+import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
 import { PrismaService } from 'src/prisma.service';
-import { CreateMessageDto } from '../dto/create-message.dto';
-import { BaseApiChannel } from './base.api-channel';
+import { ChannelStrategy } from './channel.strategy';
 
-export class TelegramApiChannel extends BaseApiChannel {
+export class TelegramStrategy implements ChannelStrategy {
   private readonly bot: TelegramBot;
 
-  constructor(channel: Channel, prismaService: PrismaService) {
-    super(channel, prismaService);
+  constructor(channel: Channel, private readonly prismaService: PrismaService) {
     this.bot = new TelegramBot(channel.token);
   }
 
-  async sendMessage(chat: Chat, message: CreateMessageDto): Promise<any[]> {
+  async send(chat: Chat, message: CreateMessageDto): Promise<any[]> {
     const telegramMessages = [];
 
     if (message.text) {
@@ -60,10 +59,7 @@ export class TelegramApiChannel extends BaseApiChannel {
                 buttons: undefined,
                 text: message.text ?? message.caption,
                 attachments: {
-                  create: await TelegramApiChannel.createAttachment(
-                    this.bot,
-                    message,
-                  ),
+                  create: await this.createAttachment(this.bot, message),
                 },
               },
             },
@@ -102,7 +98,7 @@ export class TelegramApiChannel extends BaseApiChannel {
     );
   }
 
-  public static async createAttachment(bot: TelegramBot, message: any) {
+  private async createAttachment(bot: TelegramBot, message: any) {
     if (message.audio) {
       const url = await bot.getFileLink(message.audio.file_id);
       return {

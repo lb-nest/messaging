@@ -1,16 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { MessageStatus, WebhookEventType } from '@prisma/client';
+import {
+  AttachmentType,
+  MessageStatus,
+  WebhookEventType,
+} from '@prisma/client';
 import TelegramBot from 'node-telegram-bot-api';
-import { TelegramApiChannel } from 'src/chat/api-channel/telegram.api-channel';
 import { PrismaService } from 'src/prisma.service';
-import { WebhookDispatcher } from 'src/shared/webhook-dispatcher.service';
+import { WebhookSenderService } from 'src/shared/webhook-sender.service';
 import { TelegramEventDto } from './dto/telegram-event.dto';
 
 @Injectable()
 export class TelegramService {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly webhookDispatcher: WebhookDispatcher,
+    private readonly webhookSenderService: WebhookSenderService,
   ) {}
 
   async handleEvents(channelId: number, event: TelegramEventDto) {
@@ -70,7 +73,7 @@ export class TelegramService {
     });
 
     if (chat.isNew) {
-      await this.webhookDispatcher.dispatch(channel.projectId, {
+      await this.webhookSenderService.dispatch(channel.projectId, {
         type: WebhookEventType.IncomingChats,
         payload: chat,
       });
@@ -82,34 +85,28 @@ export class TelegramService {
       },
       create: {
         chatId: chat.id,
-        externalId: String(messageFromTelegram.message_id),
         fromMe: false,
         status: MessageStatus.Delivered,
         content: {
           create: {
-            buttons: undefined,
             text: messageFromTelegram.text ?? messageFromTelegram.caption,
             attachments: {
-              create: await TelegramApiChannel.createAttachment(
-                bot,
-                messageFromTelegram,
-              ),
+              create: await this.createAttachment(bot, messageFromTelegram),
             },
+            buttons: undefined,
           },
         },
+        externalId: String(messageFromTelegram.message_id),
       },
       update: {
         updatedAt: new Date(),
         content: {
           create: {
-            buttons: undefined,
             text: messageFromTelegram.text ?? messageFromTelegram.caption,
             attachments: {
-              create: await TelegramApiChannel.createAttachment(
-                bot,
-                messageFromTelegram,
-              ),
+              create: await this.createAttachment(bot, messageFromTelegram),
             },
+            buttons: undefined,
           },
         },
       },
@@ -144,7 +141,7 @@ export class TelegramService {
       },
     });
 
-    await this.webhookDispatcher.dispatch(channel.projectId, {
+    await this.webhookSenderService.dispatch(channel.projectId, {
       type: WebhookEventType.IncomingMessages,
       payload: [message],
     });
@@ -154,9 +151,9 @@ export class TelegramService {
 
   private async createContact(
     bot: TelegramBot,
-    message: TelegramEventDto['message'],
+    msg: TelegramEventDto['message'],
   ) {
-    const user = await bot.getUserProfilePhotos(message.from.id);
+    const user = await bot.getUserProfilePhotos(msg.from.id);
     const photo = user.photos[0]?.at(-1);
 
     let avatarUrl: string;
@@ -164,14 +161,66 @@ export class TelegramService {
       avatarUrl = await bot.getFileLink(photo.file_id);
     }
 
-    const name = [message.from.first_name, message.from.last_name]
+    const name = [msg.from.first_name, msg.from.last_name]
       .filter(Boolean)
       .join(' ');
 
     return {
-      username: message.from.username,
+      username: msg.from.username,
       name,
       avatarUrl,
     };
+  }
+
+  private async createAttachment(
+    bot: TelegramBot,
+    msg: TelegramEventDto['message'],
+  ) {
+    if (msg.audio) {
+      const url = await bot.getFileLink(msg.audio.file_id);
+      return {
+        type: AttachmentType.Audio,
+        url,
+        name: msg.audio.file_name,
+      };
+    }
+
+    if (msg.document) {
+      const url = await bot.getFileLink(msg.document.file_id);
+      return {
+        type: AttachmentType.Document,
+        url,
+        name: msg.document.file_name,
+      };
+    }
+
+    if (msg.photo) {
+      const photo = msg.photo.at(-1);
+
+      const url = await bot.getFileLink(photo.file_id);
+      return {
+        type: AttachmentType.Image,
+        url,
+        name: null,
+      };
+    }
+
+    if (msg.video) {
+      const url = await bot.getFileLink(msg.video.file_id);
+      return {
+        type: AttachmentType.Video,
+        url,
+        name: msg.video.file_name,
+      };
+    }
+
+    if (msg.voice) {
+      const url = await bot.getFileLink(msg.voice.file_id);
+      return {
+        type: AttachmentType.Audio,
+        url,
+        name: null,
+      };
+    }
   }
 }

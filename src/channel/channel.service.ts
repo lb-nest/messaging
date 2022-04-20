@@ -1,40 +1,47 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotImplementedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ChannelStatus } from '@prisma/client';
-import TelegramBot from 'node-telegram-bot-api';
+import { ChannelType } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
+import { ChannelContext } from './channel.context';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
+import { TelegramStrategy } from './telegram.strategy';
+import { WebchatStrategy } from './webchat.strategy';
+import { WhatsappStrategy } from './whatsapp.strategy';
 
 @Injectable()
 export class ChannelService {
   constructor(
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
+    private readonly context: ChannelContext,
   ) {}
 
   async create(projectId: number, createChannelDto: CreateChannelDto) {
-    const bot = new TelegramBot(createChannelDto.token);
-    await bot.getMe();
+    switch (createChannelDto.type) {
+      case ChannelType.Telegram:
+        this.context.setStrategy(
+          new TelegramStrategy(this.prismaService, this.configService),
+        );
+        break;
 
-    const channel = await this.prismaService.channel.create({
-      data: {
-        projectId,
-        ...createChannelDto,
-        status: ChannelStatus.Connected,
-      },
-      select: {
-        id: true,
-        name: true,
-        type: true,
-        status: true,
-      },
-    });
+      case ChannelType.Webchat:
+        this.context.setStrategy(
+          new WebchatStrategy(this.prismaService, this.configService),
+        );
+        break;
 
-    const url = this.configService.get<string>('TELEGRAM_WEBHOOK');
-    await bot.setWebHook(url.replace(':id', String(channel.id)));
+      case ChannelType.Whatsapp:
+        this.context.setStrategy(
+          new WhatsappStrategy(this.prismaService, this.configService),
+        );
+        break;
 
-    return channel;
+      default:
+        throw new NotImplementedException();
+    }
+
+    return this.context.create(projectId, createChannelDto);
   }
 
   findAll(projectId: number) {

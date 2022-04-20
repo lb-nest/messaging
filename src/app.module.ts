@@ -5,6 +5,7 @@ import { ChatModule } from './chat/chat.module';
 import { TelegramModule } from './telegram/telegram.module';
 import { HsmModule } from './hsm/hsm.module';
 import { WebhookModule } from './webhook/webhook.module';
+import { WebchatModule } from './webchat/webchat.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { WebhookModule } from './webhook/webhook.module';
     HsmModule,
     TelegramModule,
     WebhookModule,
+    WebchatModule,
   ],
 })
 export class AppModule {}

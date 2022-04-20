@@ -1,17 +1,20 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
-import { WebhookEventType } from '@prisma/client';
-import { ApiChannelFactory } from 'src/chat/api-channel/api-channel.factory';
+import { ChannelType, WebhookEventType } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
-import { WebhookDispatcher } from 'src/shared/webhook-dispatcher.service';
+import { WebhookSenderService } from 'src/shared/webhook-sender.service';
+import { ChannelContext } from './channel.context';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
+import { TelegramStrategy } from './telegram.strategy';
+import { WebchatStrategy } from './webchat.strategy';
+import { WhatsappStrategy } from './whatsapp.strategy';
 
 @Injectable()
 export class MessageService {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly apiChannelFactory: ApiChannelFactory,
-    private readonly webhookDispatcher: WebhookDispatcher,
+    private readonly webhookSenderService: WebhookSenderService,
+    private readonly context: ChannelContext,
   ) {}
 
   async create(
@@ -31,11 +34,32 @@ export class MessageService {
       },
     });
 
-    const messages = await this.apiChannelFactory
-      .create(chat.channel)
-      .sendMessage<any>(chat, createMessageDto);
+    switch (chat.channel.type) {
+      case ChannelType.Telegram:
+        this.context.setStrategy(
+          new TelegramStrategy(chat.channel, this.prismaService),
+        );
+        break;
 
-    this.webhookDispatcher.dispatch(projectId, {
+      case ChannelType.Webchat:
+        this.context.setStrategy(
+          new WebchatStrategy(chat.channel, this.prismaService),
+        );
+        break;
+
+      case ChannelType.Whatsapp:
+        this.context.setStrategy(
+          new WhatsappStrategy(chat.channel, this.prismaService),
+        );
+        break;
+
+      default:
+        throw new NotImplementedException();
+    }
+
+    const messages = await this.context.send(chat, createMessageDto);
+
+    this.webhookSenderService.dispatch(projectId, {
       type: WebhookEventType.OutgoingMessages,
       payload: messages,
     });

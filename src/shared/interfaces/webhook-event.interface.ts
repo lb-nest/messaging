@@ -1,6 +1,6 @@
 import { WebhookEventType } from '@prisma/client';
 
-export interface IWebhookEvent {
+export interface WebhookEvent {
   type: WebhookEventType;
   payload: any;
 }

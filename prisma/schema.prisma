@@ -68,10 +68,12 @@ model Message {
   chat       Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
   fromMe     Boolean
   status     MessageStatus
-  externalId String        @unique
+  externalId String
   content    Content[]
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
+
+  @@unique([chatId, externalId])
 }
 
 model Content {

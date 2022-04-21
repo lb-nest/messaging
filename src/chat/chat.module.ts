@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { PrismaService } from 'src/prisma.service';
 import { ApiChannelRepository } from 'src/shared/api-channel.repository';
 import { WebhookSenderService } from 'src/shared/webhook-sender.service';
@@ -7,6 +8,7 @@ import { ChatService } from './chat.service';
 import { MessageService } from './message.service';
 
 @Module({
+  imports: [ConfigModule],
   controllers: [ChatController],
   providers: [
     ChatService,

@@ -20,15 +20,15 @@ export class WhatsappApiChannel extends ApiChannel {
     console.log(args[0], args[1]);
   }
 
-  static async createContact(message: unknown): Promise<any> {
-    throw new NotImplementedException();
-  }
-
-  static async createAttachment(message: unknown): Promise<any> {
-    throw new NotImplementedException();
-  }
-
   async send(chat: Chat, message: CreateMessageDto): Promise<any[]> {
+    throw new NotImplementedException();
+  }
+
+  private static async createContact(message: unknown): Promise<any> {
+    throw new NotImplementedException();
+  }
+
+  private static async createAttachment(message: unknown): Promise<any> {
     throw new NotImplementedException();
   }
 }

@@ -18,8 +18,12 @@ import { WebhookSenderService } from './webhook-sender.service';
 export class TelegramApiChannel extends ApiChannel {
   private readonly bot: TelegramBot;
 
-  constructor(channel: Channel, prismaService: PrismaService) {
-    super(channel, prismaService);
+  constructor(
+    channel: Channel,
+    prismaService: PrismaService,
+    configService: ConfigService,
+  ) {
+    super(channel, prismaService, configService);
     this.bot = new TelegramBot(channel.token);
   }
 
@@ -76,10 +80,7 @@ export class TelegramApiChannel extends ApiChannel {
       create: {
         accountId,
         contact: {
-          create: await TelegramApiChannel.createContact(
-            bot,
-            messageFromTelegram,
-          ),
+          create: await this.createContact(bot, messageFromTelegram),
         },
         channel: {
           connect: {
@@ -113,7 +114,10 @@ export class TelegramApiChannel extends ApiChannel {
 
     const message = await prisma.message.upsert({
       where: {
-        externalId: String(messageFromTelegram.message_id),
+        chatId_externalId: {
+          chatId: chat.id,
+          externalId: String(messageFromTelegram.message_id),
+        },
       },
       create: {
         chatId: chat.id,
@@ -123,10 +127,7 @@ export class TelegramApiChannel extends ApiChannel {
           create: {
             text: messageFromTelegram.text ?? messageFromTelegram.caption,
             attachments: {
-              create: await TelegramApiChannel.createAttachment(
-                bot,
-                messageFromTelegram,
-              ),
+              create: await this.createAttachment(bot, messageFromTelegram),
             },
             buttons: undefined,
           },
@@ -139,10 +140,7 @@ export class TelegramApiChannel extends ApiChannel {
           create: {
             text: messageFromTelegram.text ?? messageFromTelegram.caption,
             attachments: {
-              create: await TelegramApiChannel.createAttachment(
-                bot,
-                messageFromTelegram,
-              ),
+              create: await this.createAttachment(bot, messageFromTelegram),
             },
             buttons: undefined,
           },
@@ -185,78 +183,6 @@ export class TelegramApiChannel extends ApiChannel {
     });
 
     return 'ok';
-  }
-
-  static async createContact(
-    bot: TelegramBot,
-    msg: TelegramEventDto['message'],
-  ) {
-    const user = await bot.getUserProfilePhotos(msg.from.id);
-    const photo = user.photos[0]?.at(-1);
-
-    let avatarUrl: string;
-    if (photo) {
-      avatarUrl = await bot.getFileLink(photo.file_id);
-    }
-
-    const name = [msg.from.first_name, msg.from.last_name]
-      .filter(Boolean)
-      .join(' ');
-
-    return {
-      username: msg.from.username,
-      name,
-      avatarUrl,
-    };
-  }
-
-  static async createAttachment(bot: TelegramBot, message: any) {
-    if (message.audio) {
-      const url = await bot.getFileLink(message.audio.file_id);
-      return {
-        type: AttachmentType.Audio,
-        url,
-        name: message.audio.file_name,
-      };
-    }
-
-    if (message.document) {
-      const url = await bot.getFileLink(message.document.file_id);
-      return {
-        type: AttachmentType.Document,
-        url,
-        name: message.document.file_name,
-      };
-    }
-
-    if (message.photo) {
-      const photo = message.photo.at(-1);
-
-      const url = await bot.getFileLink(photo.file_id);
-      return {
-        type: AttachmentType.Image,
-        url,
-        name: null,
-      };
-    }
-
-    if (message.video) {
-      const url = await bot.getFileLink(message.video.file_id);
-      return {
-        type: AttachmentType.Video,
-        url,
-        name: message.video.file_name,
-      };
-    }
-
-    if (message.voice) {
-      const url = await bot.getFileLink(message.voice.file_id);
-      return {
-        type: AttachmentType.Audio,
-        url,
-        name: null,
-      };
-    }
   }
 
   async send(chat: Chat, message: CreateMessageDto): Promise<any[]> {
@@ -304,7 +230,6 @@ export class TelegramApiChannel extends ApiChannel {
             status: MessageStatus.Delivered,
             content: {
               create: {
-                buttons: undefined,
                 text: message.text ?? message.caption,
                 attachments: {
                   create: await TelegramApiChannel.createAttachment(
@@ -312,6 +237,7 @@ export class TelegramApiChannel extends ApiChannel {
                     message,
                   ),
                 },
+                buttons: undefined,
               },
             },
           },
@@ -347,5 +273,77 @@ export class TelegramApiChannel extends ApiChannel {
         }),
       ),
     );
+  }
+
+  private static async createContact(
+    bot: TelegramBot,
+    msg: TelegramEventDto['message'],
+  ) {
+    const user = await bot.getUserProfilePhotos(msg.from.id);
+    const photo = user.photos[0]?.at(-1);
+
+    let avatarUrl: string;
+    if (photo) {
+      avatarUrl = await bot.getFileLink(photo.file_id);
+    }
+
+    const name = [msg.from.first_name, msg.from.last_name]
+      .filter(Boolean)
+      .join(' ');
+
+    return {
+      username: msg.from.username,
+      name,
+      avatarUrl,
+    };
+  }
+
+  private static async createAttachment(bot: TelegramBot, message: any) {
+    if (message.audio) {
+      const url = await bot.getFileLink(message.audio.file_id);
+      return {
+        type: AttachmentType.Audio,
+        url,
+        name: message.audio.file_name,
+      };
+    }
+
+    if (message.document) {
+      const url = await bot.getFileLink(message.document.file_id);
+      return {
+        type: AttachmentType.Document,
+        url,
+        name: message.document.file_name,
+      };
+    }
+
+    if (message.photo) {
+      const photo = message.photo.at(-1);
+
+      const url = await bot.getFileLink(photo.file_id);
+      return {
+        type: AttachmentType.Image,
+        url,
+        name: null,
+      };
+    }
+
+    if (message.video) {
+      const url = await bot.getFileLink(message.video.file_id);
+      return {
+        type: AttachmentType.Video,
+        url,
+        name: message.video.file_name,
+      };
+    }
+
+    if (message.voice) {
+      const url = await bot.getFileLink(message.voice.file_id);
+      return {
+        type: AttachmentType.Audio,
+        url,
+        name: null,
+      };
+    }
   }
 }

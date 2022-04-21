@@ -1,4 +1,5 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { WebhookEventType } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { ApiChannelRepository } from 'src/shared/api-channel.repository';
@@ -10,6 +11,7 @@ import { UpdateMessageDto } from './dto/update-message.dto';
 export class MessageService {
   constructor(
     private readonly prismaService: PrismaService,
+    private readonly configService: ConfigService,
     private readonly webhookSenderService: WebhookSenderService,
     private readonly apiChannelRepository: ApiChannelRepository,
   ) {}
@@ -34,6 +36,7 @@ export class MessageService {
     const channel = new this.apiChannelRepository[chat.channel.type](
       chat.channel,
       this.prismaService,
+      this.configService,
     );
 
     const messages = await channel.send(chat, createMessageDto);

@@ -5,13 +5,15 @@ import {
   ChannelStatus,
   Chat,
   MessageStatus,
+  WebhookEventType,
 } from '@prisma/client';
 import TelegramBot from 'node-telegram-bot-api';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
+import { TelegramEventDto } from 'src/channel/dto/telegram-event.dto';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
 import { PrismaService } from 'src/prisma.service';
-import { TelegramEventDto } from 'src/telegram/dto/telegram-event.dto';
 import { ApiChannel } from './api-channel.interface';
+import { WebhookSenderService } from './webhook-sender.service';
 
 export class TelegramApiChannel extends ApiChannel {
   private readonly bot: TelegramBot;
@@ -22,18 +24,18 @@ export class TelegramApiChannel extends ApiChannel {
   }
 
   static async create(
-    prismaService: PrismaService,
-    configService: ConfigService,
     projectId: number,
-    createChannelDto: CreateChannelDto,
+    data: CreateChannelDto,
+    prisma: PrismaService,
+    config: ConfigService,
   ): Promise<any> {
-    const bot = new TelegramBot(createChannelDto.token);
+    const bot = new TelegramBot(data.token);
     await bot.getMe();
 
-    const channel = await prismaService.channel.create({
+    const channel = await prisma.channel.create({
       data: {
         projectId,
-        ...createChannelDto,
+        ...data,
         status: ChannelStatus.Connected,
       },
       select: {
@@ -44,10 +46,145 @@ export class TelegramApiChannel extends ApiChannel {
       },
     });
 
-    const url = configService.get<string>('TELEGRAM_WEBHOOK');
-    await bot.setWebHook(url.replace(':id', String(channel.id)));
+    const url = config.get<string>('MESSAGING_URL');
+    await bot.setWebHook(url.concat(`/channels/${channel.id}/webhook`));
 
     return channel;
+  }
+
+  static async handleEvent(
+    channel: Channel,
+    event: TelegramEventDto,
+    prisma: PrismaService,
+    webhookSender: WebhookSenderService,
+  ) {
+    const messageFromTelegram = event.message ?? event.edited_message;
+    if (!messageFromTelegram) {
+      return;
+    }
+
+    const accountId = String(messageFromTelegram.chat.id);
+    const bot = new TelegramBot(channel.token);
+
+    const chat = await prisma.chat.upsert({
+      where: {
+        channelId_accountId: {
+          channelId: channel.id,
+          accountId,
+        },
+      },
+      create: {
+        accountId,
+        contact: {
+          create: await TelegramApiChannel.createContact(
+            bot,
+            messageFromTelegram,
+          ),
+        },
+        channel: {
+          connect: {
+            id: channel.id,
+          },
+        },
+      },
+      update: {
+        isNew: false,
+      },
+      select: {
+        id: true,
+        isNew: true,
+        contact: {
+          select: {
+            username: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+        messages: true,
+      },
+    });
+
+    if (chat.isNew) {
+      await webhookSender.dispatch(channel.projectId, {
+        type: WebhookEventType.IncomingChats,
+        payload: chat,
+      });
+    }
+
+    const message = await prisma.message.upsert({
+      where: {
+        externalId: String(messageFromTelegram.message_id),
+      },
+      create: {
+        chatId: chat.id,
+        fromMe: false,
+        status: MessageStatus.Delivered,
+        content: {
+          create: {
+            text: messageFromTelegram.text ?? messageFromTelegram.caption,
+            attachments: {
+              create: await TelegramApiChannel.createAttachment(
+                bot,
+                messageFromTelegram,
+              ),
+            },
+            buttons: undefined,
+          },
+        },
+        externalId: String(messageFromTelegram.message_id),
+      },
+      update: {
+        updatedAt: new Date(),
+        content: {
+          create: {
+            text: messageFromTelegram.text ?? messageFromTelegram.caption,
+            attachments: {
+              create: await TelegramApiChannel.createAttachment(
+                bot,
+                messageFromTelegram,
+              ),
+            },
+            buttons: undefined,
+          },
+        },
+      },
+      select: {
+        id: true,
+        fromMe: true,
+        status: true,
+        chat: {
+          select: {
+            id: true,
+          },
+        },
+        content: {
+          orderBy: {
+            id: 'desc',
+          },
+          take: 1,
+          select: {
+            text: true,
+            attachments: {
+              select: {
+                type: true,
+                url: true,
+                name: true,
+              },
+            },
+            buttons: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    await webhookSender.dispatch(channel.projectId, {
+      type: WebhookEventType.IncomingMessages,
+      payload: [message],
+    });
+
+    return 'ok';
   }
 
   static async createContact(

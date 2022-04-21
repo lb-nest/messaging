@@ -8,12 +8,16 @@ import { ApiChannel } from './api-channel.interface';
 
 export class WhatsappApiChannel extends ApiChannel {
   static async create(
-    prismaService: PrismaService,
-    configService: ConfigService,
     projectId: number,
-    createChannelDto: CreateChannelDto,
+    data: CreateChannelDto,
+    prisma: PrismaService,
+    config: ConfigService,
   ): Promise<any> {
     throw new NotImplementedException();
+  }
+
+  static async handleEvent(...args: any[]) {
+    console.log(args[0], args[1]);
   }
 
   static async createContact(message: unknown): Promise<any> {

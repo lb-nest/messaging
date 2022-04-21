@@ -55,4 +55,9 @@ export class ChannelController {
   delete(@User() user: any, @Param('id') id: string) {
     return this.channelService.delete(user.project.id, Number(id));
   }
+
+  @Post(':id/webhook')
+  handleEvent(@Param('id') id: string, @Body() event: any) {
+    return this.channelService.handleEvent(Number(id), event);
+  }
 }

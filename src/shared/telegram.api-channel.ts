@@ -101,16 +101,8 @@ export class TelegramApiChannel extends ApiChannel {
             avatarUrl: true,
           },
         },
-        messages: true,
       },
     });
-
-    if (chat.isNew) {
-      await webhookSender.dispatch(channel.projectId, {
-        type: WebhookEventType.IncomingChats,
-        payload: chat,
-      });
-    }
 
     const message = await prisma.message.upsert({
       where: {
@@ -174,6 +166,14 @@ export class TelegramApiChannel extends ApiChannel {
         },
         createdAt: true,
         updatedAt: true,
+      },
+    });
+
+    await webhookSender.dispatch(channel.projectId, {
+      type: WebhookEventType.IncomingChats,
+      payload: {
+        ...chat,
+        messages: [message],
       },
     });
 

@@ -81,16 +81,8 @@ export class WebchatApiChannel extends ApiChannel {
             avatarUrl: true,
           },
         },
-        messages: true,
       },
     });
-
-    if (chat.isNew) {
-      await webhookSender.dispatch(channel.projectId, {
-        type: WebhookEventType.IncomingChats,
-        payload: chat,
-      });
-    }
 
     const message = await prisma.message.create({
       data: {
@@ -134,6 +126,14 @@ export class WebchatApiChannel extends ApiChannel {
         },
         createdAt: true,
         updatedAt: true,
+      },
+    });
+
+    await webhookSender.dispatch(channel.projectId, {
+      type: WebhookEventType.IncomingChats,
+      payload: {
+        ...chat,
+        messages: [message],
       },
     });
 

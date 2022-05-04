@@ -2,71 +2,44 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateHsmDto } from './dto/create-hsm.dto';
 import { UpdateHsmDto } from './dto/update-hsm.dto';
+import { Hsm } from './entities/hsm.entity';
 
 @Injectable()
 export class HsmService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  create(projectId: number, createHsmDto: CreateHsmDto) {
+  async create(projectId: number, createHsmDto: CreateHsmDto): Promise<Hsm> {
     return this.prismaService.templateMessage.create({
       data: {
         projectId,
         ...createHsmDto,
       },
-      select: {
-        id: true,
-        code: true,
-        text: true,
-        buttons: true,
+      include: {
         approval: {
-          select: {
-            channel: {
-              select: {
-                id: true,
-                name: true,
-                type: true,
-                status: true,
-              },
-            },
-            status: true,
+          include: {
+            channel: true,
           },
         },
-        createdAt: true,
-        updatedAt: true,
       },
     });
   }
 
-  findAll(projectId: number) {
+  async findAll(projectId: number): Promise<Hsm[]> {
     return this.prismaService.templateMessage.findMany({
       where: {
         projectId,
       },
-      select: {
-        id: true,
-        code: true,
-        text: true,
-        buttons: true,
+      include: {
         approval: {
-          select: {
-            channel: {
-              select: {
-                id: true,
-                name: true,
-                type: true,
-                status: true,
-              },
-            },
-            status: true,
+          include: {
+            channel: true,
           },
         },
-        createdAt: true,
-        updatedAt: true,
       },
     });
   }
 
-  findOne(projectId: number, id: number) {
+  async findOne(projectId: number, id: number): Promise<Hsm> {
     return this.prismaService.templateMessage.findUnique({
       where: {
         projectId_id: {
@@ -74,31 +47,21 @@ export class HsmService {
           id,
         },
       },
-      select: {
-        id: true,
-        code: true,
-        text: true,
-        buttons: true,
+      include: {
         approval: {
-          select: {
-            channel: {
-              select: {
-                id: true,
-                name: true,
-                type: true,
-                status: true,
-              },
-            },
-            status: true,
+          include: {
+            channel: true,
           },
         },
-        createdAt: true,
-        updatedAt: true,
       },
     });
   }
 
-  update(projectId: number, id: number, updateHsmDto: UpdateHsmDto) {
+  async update(
+    projectId: number,
+    id: number,
+    updateHsmDto: UpdateHsmDto,
+  ): Promise<Hsm> {
     return this.prismaService.templateMessage.update({
       where: {
         projectId_id: {
@@ -107,31 +70,17 @@ export class HsmService {
         },
       },
       data: updateHsmDto,
-      select: {
-        id: true,
-        code: true,
-        text: true,
-        buttons: true,
+      include: {
         approval: {
-          select: {
-            channel: {
-              select: {
-                id: true,
-                name: true,
-                type: true,
-                status: true,
-              },
-            },
-            status: true,
+          include: {
+            channel: true,
           },
         },
-        createdAt: true,
-        updatedAt: true,
       },
     });
   }
 
-  delete(projectId: number, id: number) {
+  async delete(projectId: number, id: number): Promise<Hsm> {
     return this.prismaService.templateMessage.delete({
       where: {
         projectId_id: {
@@ -139,26 +88,12 @@ export class HsmService {
           id,
         },
       },
-      select: {
-        id: true,
-        code: true,
-        text: true,
-        buttons: true,
+      include: {
         approval: {
-          select: {
-            channel: {
-              select: {
-                id: true,
-                name: true,
-                type: true,
-                status: true,
-              },
-            },
-            status: true,
+          include: {
+            channel: true,
           },
         },
-        createdAt: true,
-        updatedAt: true,
       },
     });
   }

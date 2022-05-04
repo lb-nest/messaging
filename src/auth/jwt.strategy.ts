@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import axios from 'axios';
 import { ExtractJwt, Strategy } from 'passport-jwt';
+import { TokenPayload } from './entities/token-payload.entity';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -11,11 +12,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       passReqToCallback: true,
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get('JWT_SECRET'),
+      secretOrKey: configService.get('SECRET'),
     });
   }
 
-  async validate(req: any, payload: any) {
+  async validate(req: any, payload: TokenPayload) {
     const url = this.configService.get<string>('AUTH_URL');
 
     try {

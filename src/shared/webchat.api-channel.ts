@@ -1,15 +1,9 @@
 import { ConfigService } from '@nestjs/config';
-import {
-  AttachmentType,
-  Channel,
-  ChannelStatus,
-  Chat,
-  MessageStatus,
-  WebhookEventType,
-} from '@prisma/client';
+import * as Prisma from '@prisma/client';
 import axios from 'axios';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { WebchatEventDto } from 'src/channel/dto/webchat-event.dto';
+import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
 import { ButtonType } from 'src/hsm/enums/button-type.enum';
 import { PrismaService } from 'src/prisma.service';
@@ -23,30 +17,22 @@ export class WebchatApiChannel extends ApiChannel {
     data: CreateChannelDto,
     prisma: PrismaService,
     config: ConfigService,
-  ): Promise<any> {
-    const channel = await prisma.channel.create({
+  ): Promise<Channel> {
+    return prisma.channel.create({
       data: {
         projectId,
         ...data,
-        status: ChannelStatus.Connected,
-      },
-      select: {
-        id: true,
-        name: true,
-        type: true,
-        status: true,
+        status: Prisma.ChannelStatus.Connected,
       },
     });
-
-    return channel;
   }
 
   static async handleEvent(
-    channel: Channel,
+    channel: Prisma.Channel,
     event: WebchatEventDto,
     prisma: PrismaService,
     webhookSender: WebhookSenderService,
-  ) {
+  ): Promise<'ok'> {
     const chat = await prisma.chat.upsert({
       where: {
         channelId_accountId: {
@@ -88,7 +74,7 @@ export class WebchatApiChannel extends ApiChannel {
       data: {
         chatId: chat.id,
         fromMe: false,
-        status: MessageStatus.Delivered,
+        status: Prisma.MessageStatus.Delivered,
         content: {
           create: {
             text: event.message,
@@ -129,39 +115,42 @@ export class WebchatApiChannel extends ApiChannel {
       },
     });
 
-    await webhookSender.dispatch(channel.projectId, {
-      type: WebhookEventType.IncomingChats,
+    await webhookSender.dispatchAsync(channel.projectId, {
+      type: Prisma.WebhookEventType.IncomingChats,
       payload: {
         ...chat,
         messages: [message],
       },
     });
 
-    await webhookSender.dispatch(channel.projectId, {
-      type: WebhookEventType.IncomingMessages,
+    await webhookSender.dispatchAsync(channel.projectId, {
+      type: Prisma.WebhookEventType.IncomingMessages,
       payload: [message],
     });
 
     return 'ok';
   }
 
-  async send(chat: Chat, message: CreateMessageDto): Promise<any[]> {
-    const messages = [];
+  async send(chat: Prisma.Chat, message: CreateMessageDto): Promise<any[]> {
+    const messages: any[] = [];
 
     if (message.attachments) {
       const url = this.configService.get<string>('WEBSOCKET_EDGE_URL');
       const res = await Promise.all(
         message.attachments
-          .filter((attachment) => attachment.type === AttachmentType.Image)
+          .filter(({ type }) => type === Prisma.AttachmentType.Image)
           .map((attachment) =>
-            axios.post(url.concat(`/sessions/${chat.accountId}/messages`), {
-              attachment: {
-                type: 'image',
-                payload: {
-                  src: attachment.url,
+            axios.post<any>(
+              url.concat(`/sessions/${chat.accountId}/messages`),
+              {
+                attachment: {
+                  type: 'image',
+                  payload: {
+                    src: attachment.url,
+                  },
                 },
               },
-            }),
+            ),
           ),
       );
 
@@ -170,7 +159,7 @@ export class WebchatApiChannel extends ApiChannel {
 
     if (message.text) {
       const url = this.configService.get<string>('WEBSOCKET_EDGE_URL');
-      const res = await axios.post(
+      const res = await axios.post<any>(
         url.concat(`/sessions/${chat.accountId}/messages`),
         {
           text: message.text,
@@ -194,17 +183,17 @@ export class WebchatApiChannel extends ApiChannel {
             chatId: chat.id,
             externalId: message.message_id,
             fromMe: true,
-            status: MessageStatus.Delivered,
+            status: Prisma.MessageStatus.Delivered,
             content: {
               create: {
                 text: message.text,
                 attachments: {
                   create: message.attachment && {
-                    type: AttachmentType.Image,
+                    type: Prisma.AttachmentType.Image,
                     url: message.attachment.payload.src,
                   },
                 },
-                buttons: message.quick_replies?.map((button) => ({
+                buttons: message.quick_replies?.map((button: any) => ({
                   ...button,
                   type: ButtonType.QuickReply,
                 })),

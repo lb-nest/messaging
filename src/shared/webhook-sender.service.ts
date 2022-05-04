@@ -8,7 +8,11 @@ import { WebhookEvent } from './interfaces/webhook-event.interface';
 export class WebhookSenderService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async dispatch(projectId: number, event: WebhookEvent) {
+  dispatch(projectId: number, event: WebhookEvent): void {
+    this.dispatchAsync(projectId, event).catch(() => null);
+  }
+
+  async dispatchAsync(projectId: number, event: WebhookEvent): Promise<void> {
     const webhooks = await this.prismaService.webhook.findMany({
       where: {
         projectId,

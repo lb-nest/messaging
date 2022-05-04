@@ -7,39 +7,50 @@ import {
   Patch,
   Post,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { User } from 'src/auth/user.decorator';
+import { Auth } from 'src/auth/auth.decorator';
+import { TokenPayload } from 'src/auth/entities/token-payload.entity';
+import { TransformInterceptor } from 'src/shared/interceptors/transform.interceptor';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChannelService } from './channel.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
+import { Channel } from './entities/channel.entity';
 
 @Controller('channels')
 export class ChannelController {
   constructor(private readonly channelService: ChannelService) {}
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Channel))
   @Post()
-  create(@User() user: any, @Body() createChannelDto: CreateChannelDto) {
+  create(
+    @Auth() user: TokenPayload,
+    @Body() createChannelDto: CreateChannelDto,
+  ) {
     return this.channelService.create(user.project.id, createChannelDto);
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Channel))
   @Get()
-  findAll(@User() user: any) {
+  findAll(@Auth() user: TokenPayload) {
     return this.channelService.findAll(user.project.id);
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Channel))
   @Get(':id')
-  findOne(@User() user: any, @Param('id') id: string) {
+  findOne(@Auth() user: TokenPayload, @Param('id') id: string) {
     return this.channelService.findOne(user.project.id, Number(id));
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Channel))
   @Patch(':id')
   update(
-    @User() user: any,
+    @Auth() user: TokenPayload,
     @Param('id') id: string,
     @Body() updateChannelDto: UpdateChannelDto,
   ) {
@@ -51,8 +62,9 @@ export class ChannelController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Channel))
   @Delete(':id')
-  delete(@User() user: any, @Param('id') id: string) {
+  delete(@Auth() user: TokenPayload, @Param('id') id: string) {
     return this.channelService.delete(user.project.id, Number(id));
   }
 

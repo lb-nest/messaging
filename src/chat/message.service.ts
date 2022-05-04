@@ -6,6 +6,7 @@ import { ApiChannelRepository } from 'src/shared/api-channel.repository';
 import { WebhookSenderService } from 'src/shared/webhook-sender.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
+import { MessageWithChatId } from './entities/message-with-chat-id.entity';
 
 @Injectable()
 export class MessageService {
@@ -20,7 +21,7 @@ export class MessageService {
     projectId: number,
     chatId: number,
     createMessageDto: CreateMessageDto,
-  ) {
+  ): Promise<MessageWithChatId[]> {
     const chat = await this.prismaService.chat.findFirst({
       where: {
         id: chatId,
@@ -29,6 +30,7 @@ export class MessageService {
         },
       },
       include: {
+        contact: true,
         channel: true,
       },
     });
@@ -41,7 +43,17 @@ export class MessageService {
 
     const messages = await channel.send(chat, createMessageDto);
 
-    this.webhookSenderService.dispatch(projectId, {
+    await this.webhookSenderService.dispatchAsync(projectId, {
+      type: WebhookEventType.OutgoingChats,
+      payload: {
+        id: chat.id,
+        contact: chat.contact,
+        isNew: chat.isNew,
+        messages: [messages.at(-1)],
+      },
+    });
+
+    await this.webhookSenderService.dispatchAsync(projectId, {
       type: WebhookEventType.OutgoingMessages,
       payload: messages,
     });
@@ -49,7 +61,10 @@ export class MessageService {
     return messages;
   }
 
-  findAll(projectId: number, chatId: number) {
+  async findAll(
+    projectId: number,
+    chatId: number,
+  ): Promise<MessageWithChatId[]> {
     return this.prismaService.message.findMany({
       where: {
         chat: {
@@ -59,10 +74,7 @@ export class MessageService {
           },
         },
       },
-      select: {
-        id: true,
-        fromMe: true,
-        status: true,
+      include: {
         chat: {
           select: {
             id: true,
@@ -73,20 +85,10 @@ export class MessageService {
             id: 'desc',
           },
           take: 1,
-          select: {
-            text: true,
-            attachments: {
-              select: {
-                type: true,
-                url: true,
-                name: true,
-              },
-            },
-            buttons: true,
+          include: {
+            attachments: true,
           },
         },
-        createdAt: true,
-        updatedAt: true,
       },
     });
   }
@@ -95,11 +97,11 @@ export class MessageService {
     projectId: number,
     id: number,
     updateMessageDto: UpdateMessageDto,
-  ) {
+  ): Promise<MessageWithChatId> {
     throw new NotImplementedException();
   }
 
-  async delete(projectId: number, id: number) {
+  async delete(projectId: number, id: number): Promise<MessageWithChatId> {
     throw new NotImplementedException();
   }
 }

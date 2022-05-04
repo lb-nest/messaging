@@ -1,10 +1,12 @@
 import { NotImplementedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Chat } from '@prisma/client';
+import * as Prisma from '@prisma/client';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
+import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
 import { PrismaService } from 'src/prisma.service';
 import { ApiChannel } from './api-channel.interface';
+import { WebhookSenderService } from './webhook-sender.service';
 
 export class WhatsappApiChannel extends ApiChannel {
   static async create(
@@ -12,23 +14,20 @@ export class WhatsappApiChannel extends ApiChannel {
     data: CreateChannelDto,
     prisma: PrismaService,
     config: ConfigService,
-  ): Promise<any> {
+  ): Promise<Channel> {
     throw new NotImplementedException();
   }
 
-  static async handleEvent(...args: any[]) {
-    console.log(args[0], args[1]);
-  }
-
-  async send(chat: Chat, message: CreateMessageDto): Promise<any[]> {
+  static async handleEvent(
+    channel: Prisma.Channel,
+    event: unknown,
+    prisma: PrismaService,
+    webhookSender: WebhookSenderService,
+  ): Promise<'ok'> {
     throw new NotImplementedException();
   }
 
-  private static async createContact(message: unknown): Promise<any> {
-    throw new NotImplementedException();
-  }
-
-  private static async createAttachment(message: unknown): Promise<any> {
+  async send(chat: Prisma.Chat, message: CreateMessageDto): Promise<any[]> {
     throw new NotImplementedException();
   }
 }

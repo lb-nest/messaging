@@ -1,15 +1,8 @@
 import { ConfigService } from '@nestjs/config';
-import {
-  AttachmentType,
-  Channel,
-  ChannelStatus,
-  Chat,
-  MessageStatus,
-  WebhookEventType,
-} from '@prisma/client';
+import * as Prisma from '@prisma/client';
 import TelegramBot from 'node-telegram-bot-api';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
-import { TelegramEventDto } from 'src/channel/dto/telegram-event.dto';
+import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
 import { PrismaService } from 'src/prisma.service';
 import { ApiChannel } from './api-channel.interface';
@@ -19,7 +12,7 @@ export class TelegramApiChannel extends ApiChannel {
   private readonly bot: TelegramBot;
 
   constructor(
-    channel: Channel,
+    channel: Prisma.Channel,
     prismaService: PrismaService,
     configService: ConfigService,
   ) {
@@ -32,7 +25,7 @@ export class TelegramApiChannel extends ApiChannel {
     data: CreateChannelDto,
     prisma: PrismaService,
     config: ConfigService,
-  ): Promise<any> {
+  ): Promise<Channel> {
     const bot = new TelegramBot(data.token);
     await bot.getMe();
 
@@ -40,13 +33,7 @@ export class TelegramApiChannel extends ApiChannel {
       data: {
         projectId,
         ...data,
-        status: ChannelStatus.Connected,
-      },
-      select: {
-        id: true,
-        name: true,
-        type: true,
-        status: true,
+        status: Prisma.ChannelStatus.Connected,
       },
     });
 
@@ -57,11 +44,11 @@ export class TelegramApiChannel extends ApiChannel {
   }
 
   static async handleEvent(
-    channel: Channel,
-    event: TelegramEventDto,
+    channel: Prisma.Channel,
+    event: TelegramBot.Update,
     prisma: PrismaService,
     webhookSender: WebhookSenderService,
-  ) {
+  ): Promise<'ok'> {
     const messageFromTelegram = event.message ?? event.edited_message;
     if (!messageFromTelegram) {
       return;
@@ -91,16 +78,8 @@ export class TelegramApiChannel extends ApiChannel {
       update: {
         isNew: false,
       },
-      select: {
-        id: true,
-        isNew: true,
-        contact: {
-          select: {
-            username: true,
-            name: true,
-            avatarUrl: true,
-          },
-        },
+      include: {
+        contact: true,
       },
     });
 
@@ -114,7 +93,7 @@ export class TelegramApiChannel extends ApiChannel {
       create: {
         chatId: chat.id,
         fromMe: false,
-        status: MessageStatus.Delivered,
+        status: Prisma.MessageStatus.Delivered,
         content: {
           create: {
             text: messageFromTelegram.text ?? messageFromTelegram.caption,
@@ -127,7 +106,6 @@ export class TelegramApiChannel extends ApiChannel {
         externalId: String(messageFromTelegram.message_id),
       },
       update: {
-        updatedAt: new Date(),
         content: {
           create: {
             text: messageFromTelegram.text ?? messageFromTelegram.caption,
@@ -137,6 +115,7 @@ export class TelegramApiChannel extends ApiChannel {
             buttons: undefined,
           },
         },
+        updatedAt: new Date(),
       },
       select: {
         id: true,
@@ -169,27 +148,27 @@ export class TelegramApiChannel extends ApiChannel {
       },
     });
 
-    await webhookSender.dispatch(channel.projectId, {
-      type: WebhookEventType.IncomingChats,
+    await webhookSender.dispatchAsync(channel.projectId, {
+      type: Prisma.WebhookEventType.IncomingChats,
       payload: {
         ...chat,
         messages: [message],
       },
     });
 
-    await webhookSender.dispatch(channel.projectId, {
-      type: WebhookEventType.IncomingMessages,
+    await webhookSender.dispatchAsync(channel.projectId, {
+      type: Prisma.WebhookEventType.IncomingMessages,
       payload: [message],
     });
 
     return 'ok';
   }
 
-  async send(chat: Chat, message: CreateMessageDto): Promise<any[]> {
-    const telegramMessages = [];
+  async send(chat: Prisma.Chat, message: CreateMessageDto): Promise<any[]> {
+    const messages: TelegramBot.Message[] = [];
 
     if (message.text) {
-      telegramMessages.push(
+      messages.push(
         await this.bot.sendMessage(chat.accountId, message.text, {
           reply_markup: undefined,
         }),
@@ -200,16 +179,16 @@ export class TelegramApiChannel extends ApiChannel {
       const attachments = await Promise.all(
         message.attachments.map((attachment) => {
           switch (attachment.type) {
-            case AttachmentType.Audio:
+            case Prisma.AttachmentType.Audio:
               return this.bot.sendAudio(chat.accountId, attachment.url);
 
-            case AttachmentType.Document:
-            case AttachmentType.Video:
+            case Prisma.AttachmentType.Document:
+            case Prisma.AttachmentType.Video:
               return this.bot.sendDocument(chat.accountId, attachment.url, {
                 caption: attachment.name,
               });
 
-            case AttachmentType.Image:
+            case Prisma.AttachmentType.Image:
               return this.bot.sendPhoto(chat.accountId, attachment.url, {
                 caption: attachment.name,
               });
@@ -217,17 +196,17 @@ export class TelegramApiChannel extends ApiChannel {
         }),
       );
 
-      telegramMessages.push(...attachments);
+      messages.push(...attachments);
     }
 
     return Promise.all(
-      telegramMessages.map(async (message) =>
+      messages.map(async (message) =>
         this.prismaService.message.create({
           data: {
             chatId: chat.id,
             externalId: String(message.message_id),
             fromMe: true,
-            status: MessageStatus.Delivered,
+            status: Prisma.MessageStatus.Delivered,
             content: {
               create: {
                 text: message.text ?? message.caption,
@@ -277,8 +256,8 @@ export class TelegramApiChannel extends ApiChannel {
 
   private static async createContact(
     bot: TelegramBot,
-    msg: TelegramEventDto['message'],
-  ) {
+    msg: TelegramBot.Message,
+  ): Promise<Omit<Prisma.Contact, 'chatId'>> {
     const user = await bot.getUserProfilePhotos(msg.from.id);
     const photo = user.photos[0]?.at(-1);
 
@@ -298,20 +277,23 @@ export class TelegramApiChannel extends ApiChannel {
     };
   }
 
-  private static async createAttachment(bot: TelegramBot, message: any) {
+  private static async createAttachment(
+    bot: TelegramBot,
+    message: TelegramBot.Message,
+  ): Promise<Omit<Prisma.Attachment, 'id' | 'contentId'>> {
     if (message.audio) {
       const url = await bot.getFileLink(message.audio.file_id);
       return {
-        type: AttachmentType.Audio,
+        type: Prisma.AttachmentType.Audio,
         url,
-        name: message.audio.file_name,
+        name: message.audio.title,
       };
     }
 
     if (message.document) {
       const url = await bot.getFileLink(message.document.file_id);
       return {
-        type: AttachmentType.Document,
+        type: Prisma.AttachmentType.Document,
         url,
         name: message.document.file_name,
       };
@@ -322,7 +304,7 @@ export class TelegramApiChannel extends ApiChannel {
 
       const url = await bot.getFileLink(photo.file_id);
       return {
-        type: AttachmentType.Image,
+        type: Prisma.AttachmentType.Image,
         url,
         name: null,
       };
@@ -331,16 +313,16 @@ export class TelegramApiChannel extends ApiChannel {
     if (message.video) {
       const url = await bot.getFileLink(message.video.file_id);
       return {
-        type: AttachmentType.Video,
+        type: Prisma.AttachmentType.Video,
         url,
-        name: message.video.file_name,
+        name: null,
       };
     }
 
     if (message.voice) {
       const url = await bot.getFileLink(message.voice.file_id);
       return {
-        type: AttachmentType.Audio,
+        type: Prisma.AttachmentType.Audio,
         url,
         name: null,
       };

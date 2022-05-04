@@ -8,14 +8,19 @@ import {
   Post,
   Query,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { User } from 'src/auth/user.decorator';
+import { Auth } from 'src/auth/auth.decorator';
+import { TokenPayload } from 'src/auth/entities/token-payload.entity';
+import { TransformInterceptor } from 'src/shared/interceptors/transform.interceptor';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
+import { Chat } from './entities/chat.entity';
+import { Message } from './entities/message.entity';
 import { MessageService } from './message.service';
 
 @Controller('chats')
@@ -26,14 +31,16 @@ export class ChatController {
   ) {}
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Chat))
   @Post()
-  create(@User() user: any, @Body() createChatDto: CreateChatDto) {
+  create(@Auth() user: TokenPayload, @Body() createChatDto: CreateChatDto) {
     return this.chatService.create(user.project.id, createChatDto);
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Chat))
   @Get()
-  findAll(@User() user: any, @Query('ids') ids?: string) {
+  findAll(@Auth() user: TokenPayload, @Query('ids') ids?: string) {
     return this.chatService.findAll(
       user.project.id,
       ids?.split(',').map(Number),
@@ -41,15 +48,35 @@ export class ChatController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Chat))
   @Get(':id')
-  findOne(@User() user: any, @Param('id') id: string) {
+  findOne(@Auth() user: TokenPayload, @Param('id') id: string) {
     return this.chatService.findOne(user.project.id, Number(id));
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Chat))
+  @Patch(':id')
+  update(
+    @Auth() user: TokenPayload,
+    @Param('id') id: string,
+    @Body() updateChatDto: UpdateChatDto,
+  ) {
+    return this.chatService.update(user.project.id, Number(id), updateChatDto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Chat))
+  @Delete(':id')
+  delete(@Auth() user: TokenPayload, @Param('id') id: string) {
+    return this.chatService.delete(user.project.id, Number(id));
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Message))
   @Post(':id/messages')
   createMessage(
-    @User() user: any,
+    @Auth() user: TokenPayload,
     @Param('id') id: string,
     @Body() createMessageDto: CreateMessageDto,
   ) {
@@ -61,15 +88,17 @@ export class ChatController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Message))
   @Get(':id/messages')
-  findAllMessages(@User() user: any, @Param('id') id: string) {
+  findAllMessages(@Auth() user: TokenPayload, @Param('id') id: string) {
     return this.messageService.findAll(user.project.id, Number(id));
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Message))
   @Patch(':chatId/messages/:id')
   updateMessage(
-    @User() user: any,
+    @Auth() user: TokenPayload,
     @Param('id') id: string,
     @Body() updateMessageDto: UpdateMessageDto,
   ) {
@@ -81,24 +110,9 @@ export class ChatController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Message))
   @Delete(':chatId/messages/:id')
-  deleteMessage(@User() user: any, @Param('id') id: string) {
+  deleteMessage(@Auth() user: TokenPayload, @Param('id') id: string) {
     return this.messageService.delete(user.project.id, Number(id));
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Patch(':id')
-  update(
-    @User() user: any,
-    @Param('id') id: string,
-    @Body() updateChatDto: UpdateChatDto,
-  ) {
-    return this.chatService.update(user.project.id, Number(id), updateChatDto);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Delete(':id')
-  delete(@User() user: any, @Param('id') id: string) {
-    return this.chatService.delete(user.project.id, Number(id));
   }
 }

@@ -2,41 +2,33 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateWebhookDto } from './dto/create-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
+import { Webhook } from './entities/webhook.entity';
 
 @Injectable()
 export class WebhookService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  create(projectId: number, createWebhookDto: CreateWebhookDto) {
+  async create(
+    projectId: number,
+    createWebhookDto: CreateWebhookDto,
+  ): Promise<Webhook> {
     return this.prismaService.webhook.create({
       data: {
         projectId,
         ...createWebhookDto,
       },
-      select: {
-        id: true,
-        name: true,
-        url: true,
-        eventType: true,
-      },
     });
   }
 
-  findAll(projectId: number) {
+  async findAll(projectId: number): Promise<Webhook[]> {
     return this.prismaService.webhook.findMany({
       where: {
         projectId,
       },
-      select: {
-        id: true,
-        name: true,
-        url: true,
-        eventType: true,
-      },
     });
   }
 
-  findOne(projectId: number, id: number) {
+  async findOne(projectId: number, id: number): Promise<Webhook> {
     return this.prismaService.webhook.findUnique({
       where: {
         projectId_id: {
@@ -44,16 +36,14 @@ export class WebhookService {
           id,
         },
       },
-      select: {
-        id: true,
-        name: true,
-        url: true,
-        eventType: true,
-      },
     });
   }
 
-  update(projectId: number, id: number, updateWebhookDto: UpdateWebhookDto) {
+  async update(
+    projectId: number,
+    id: number,
+    updateWebhookDto: UpdateWebhookDto,
+  ): Promise<Webhook> {
     return this.prismaService.webhook.update({
       where: {
         projectId_id: {
@@ -62,28 +52,16 @@ export class WebhookService {
         },
       },
       data: updateWebhookDto,
-      select: {
-        id: true,
-        name: true,
-        url: true,
-        eventType: true,
-      },
     });
   }
 
-  delete(projectId: number, id: number) {
+  async delete(projectId: number, id: number): Promise<Webhook> {
     return this.prismaService.webhook.delete({
       where: {
         projectId_id: {
           projectId,
           id,
         },
-      },
-      select: {
-        id: true,
-        name: true,
-        url: true,
-        eventType: true,
       },
     });
   }

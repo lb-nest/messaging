@@ -5,6 +5,7 @@ import { ApiChannelRepository } from 'src/shared/api-channel.repository';
 import { WebhookSenderService } from 'src/shared/webhook-sender.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
+import { Channel } from './entities/channel.entity';
 
 @Injectable()
 export class ChannelService {
@@ -15,7 +16,7 @@ export class ChannelService {
     private readonly webhookSenderService: WebhookSenderService,
   ) {}
 
-  async create(projectId: number, data: CreateChannelDto) {
+  async create(projectId: number, data: CreateChannelDto): Promise<Channel> {
     return this.apiChannelRepository[data.type].create(
       projectId,
       data,
@@ -24,33 +25,21 @@ export class ChannelService {
     );
   }
 
-  async findAll(projectId: number) {
+  async findAll(projectId: number): Promise<Channel[]> {
     return this.prismaService.channel.findMany({
       where: {
         projectId,
       },
-      select: {
-        id: true,
-        name: true,
-        type: true,
-        status: true,
-      },
     });
   }
 
-  async findOne(projectId: number, id: number) {
+  async findOne(projectId: number, id: number): Promise<Channel> {
     return this.prismaService.channel.findUnique({
       where: {
         projectId_id: {
           projectId,
           id,
         },
-      },
-      select: {
-        id: true,
-        name: true,
-        type: true,
-        status: true,
       },
     });
   }
@@ -59,7 +48,7 @@ export class ChannelService {
     projectId: number,
     id: number,
     updateChannelDto: UpdateChannelDto,
-  ) {
+  ): Promise<Channel> {
     return this.prismaService.channel.update({
       where: {
         projectId_id: {
@@ -68,16 +57,10 @@ export class ChannelService {
         },
       },
       data: updateChannelDto,
-      select: {
-        id: true,
-        name: true,
-        type: true,
-        status: true,
-      },
     });
   }
 
-  async delete(projectId: number, id: number) {
+  async delete(projectId: number, id: number): Promise<Channel> {
     return this.prismaService.channel.delete({
       where: {
         projectId_id: {
@@ -85,16 +68,10 @@ export class ChannelService {
           id,
         },
       },
-      select: {
-        id: true,
-        name: true,
-        type: true,
-        status: true,
-      },
     });
   }
 
-  async handleEvent(channelId: number, event: any) {
+  async handleEvent(channelId: number, event: any): Promise<'ok'> {
     const channel = await this.prismaService.channel.findUnique({
       where: {
         id: channelId,

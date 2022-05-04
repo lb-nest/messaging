@@ -7,11 +7,15 @@ import {
   Patch,
   Post,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
-import { User } from 'src/auth/user.decorator';
+import { Auth } from 'src/auth/auth.decorator';
+import { TokenPayload } from 'src/auth/entities/token-payload.entity';
+import { TransformInterceptor } from 'src/shared/interceptors/transform.interceptor';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateHsmDto } from './dto/create-hsm.dto';
 import { UpdateHsmDto } from './dto/update-hsm.dto';
+import { Hsm } from './entities/hsm.entity';
 import { HsmService } from './hsm.service';
 
 @Controller('hsm')
@@ -19,27 +23,31 @@ export class HsmController {
   constructor(private readonly hsmService: HsmService) {}
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Hsm))
   @Post()
-  create(@User() user: any, @Body() createHsmDto: CreateHsmDto) {
+  create(@Auth() user: TokenPayload, @Body() createHsmDto: CreateHsmDto) {
     return this.hsmService.create(user.project.id, createHsmDto);
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Hsm))
   @Get()
-  findAll(@User() user: any) {
+  findAll(@Auth() user: TokenPayload) {
     return this.hsmService.findAll(user.project.id);
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Hsm))
   @Get(':id')
-  findOne(@User() user: any, @Param('id') id: string) {
+  findOne(@Auth() user: TokenPayload, @Param('id') id: string) {
     return this.hsmService.findOne(user.project.id, Number(id));
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Hsm))
   @Patch(':id')
   update(
-    @User() user: any,
+    @Auth() user: TokenPayload,
     @Param('id') id: string,
     @Body() updateHsmDto: UpdateHsmDto,
   ) {
@@ -47,8 +55,9 @@ export class HsmController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Hsm))
   @Delete(':id')
-  delete(@User() user: any, @Param('id') id: string) {
+  delete(@Auth() user: TokenPayload, @Param('id') id: string) {
     return this.hsmService.delete(user.project.id, Number(id));
   }
 }

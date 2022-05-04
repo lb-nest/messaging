@@ -29,9 +29,10 @@ export class CreateMessageDto {
   text?: string;
 
   @Type(() => Attachment)
-  @ValidateNested({ each: true })
+  @IsOptional()
   @IsArray()
-  attachments: Attachment[];
+  @ValidateNested({ each: true })
+  attachments: Attachment[] = [];
 
   @IsOptional()
   @IsArray()

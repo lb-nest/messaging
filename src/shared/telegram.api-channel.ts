@@ -1,8 +1,11 @@
 import * as Prisma from '@prisma/client';
+import { plainToClass } from 'class-transformer';
 import TelegramBot from 'node-telegram-bot-api';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
+import { Chat } from 'src/chat/entities/chat.entity';
+import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
 import { ApiChannel } from './api-channel.interface';
 import { WebhookSenderService } from './webhook-sender.service';
 
@@ -41,96 +44,89 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
     const accountId = String(telegramMessage.chat.id);
     const bot = new TelegramBot(channel.token);
 
-    const chat = await this.prismaService.chat.upsert({
-      where: {
-        channelId_accountId: {
-          channelId: channel.id,
-          accountId,
-        },
-      },
-      create: {
-        accountId,
-        contact: {
-          create: await this.createContact(bot, telegramMessage.from),
-        },
-        channel: {
-          connect: {
-            id: channel.id,
+    const chat = plainToClass(
+      Chat,
+      await this.prismaService.chat.upsert({
+        where: {
+          channelId_accountId: {
+            channelId: channel.id,
+            accountId,
           },
         },
-      },
-      update: {
-        isNew: false,
-      },
-      include: {
-        contact: true,
-      },
-    });
+        create: {
+          accountId,
+          contact: {
+            create: await this.createContact(bot, telegramMessage.from),
+          },
+          channel: {
+            connect: {
+              id: channel.id,
+            },
+          },
+        },
+        update: {
+          isNew: false,
+        },
+        include: {
+          contact: true,
+        },
+      }),
+    );
 
-    const message = await this.prismaService.message.upsert({
-      where: {
-        chatId_externalId: {
+    const message = plainToClass(
+      MessageWithChatId,
+      await this.prismaService.message.upsert({
+        where: {
+          chatId_externalId: {
+            chatId: chat.id,
+            externalId: String(telegramMessage.message_id),
+          },
+        },
+        create: {
           chatId: chat.id,
+          fromMe: false,
+          status: Prisma.MessageStatus.Delivered,
+          content: {
+            create: {
+              text: telegramMessage.text ?? telegramMessage.caption,
+              attachments: {
+                create: await this.createAttachment(bot, telegramMessage),
+              },
+              buttons: undefined,
+            },
+          },
           externalId: String(telegramMessage.message_id),
         },
-      },
-      create: {
-        chatId: chat.id,
-        fromMe: false,
-        status: Prisma.MessageStatus.Delivered,
-        content: {
-          create: {
-            text: telegramMessage.text ?? telegramMessage.caption,
-            attachments: {
-              create: await this.createAttachment(bot, telegramMessage),
-            },
-            buttons: undefined,
-          },
-        },
-        externalId: String(telegramMessage.message_id),
-      },
-      update: {
-        content: {
-          create: {
-            text: telegramMessage.text ?? telegramMessage.caption,
-            attachments: {
-              create: await this.createAttachment(bot, telegramMessage),
-            },
-            buttons: undefined,
-          },
-        },
-        updatedAt: new Date(),
-      },
-      select: {
-        id: true,
-        fromMe: true,
-        status: true,
-        chat: {
-          select: {
-            id: true,
-          },
-        },
-        content: {
-          orderBy: {
-            id: 'desc',
-          },
-          take: 1,
-          select: {
-            text: true,
-            attachments: {
-              select: {
-                type: true,
-                url: true,
-                name: true,
+        update: {
+          content: {
+            create: {
+              text: telegramMessage.text ?? telegramMessage.caption,
+              attachments: {
+                create: await this.createAttachment(bot, telegramMessage),
               },
+              buttons: undefined,
             },
-            buttons: true,
+          },
+          updatedAt: new Date(),
+        },
+        include: {
+          chat: {
+            select: {
+              id: true,
+            },
+          },
+          content: {
+            orderBy: {
+              id: 'desc',
+            },
+            take: 1,
+            include: {
+              attachments: true,
+            },
           },
         },
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+      }),
+    );
 
     await webhookSenderService.dispatchAsync(channel.projectId, {
       type: Prisma.WebhookEventType.IncomingChats,
@@ -152,7 +148,7 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
     channel: Prisma.Channel,
     chat: Prisma.Chat,
     message: CreateMessageDto,
-  ): Promise<any[]> {
+  ): Promise<MessageWithChatId[]> {
     const bot = new TelegramBot(channel.token);
 
     const messages: TelegramBot.Message[] = [];
@@ -191,52 +187,55 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
 
     return Promise.all(
       messages.map(async (message) =>
-        this.prismaService.message.create({
-          data: {
-            chatId: chat.id,
-            externalId: String(message.message_id),
-            fromMe: true,
-            status: Prisma.MessageStatus.Delivered,
-            content: {
-              create: {
-                text: message.text ?? message.caption,
-                attachments: {
-                  create: await this.createAttachment(bot, message),
-                },
-                buttons: undefined,
-              },
-            },
-          },
-          select: {
-            id: true,
-            fromMe: true,
-            status: true,
-            chat: {
-              select: {
-                id: true,
-              },
-            },
-            content: {
-              orderBy: {
-                id: 'desc',
-              },
-              take: 1,
-              select: {
-                text: true,
-                attachments: {
-                  select: {
-                    type: true,
-                    url: true,
-                    name: true,
+        plainToClass(
+          MessageWithChatId,
+          this.prismaService.message.create({
+            data: {
+              chatId: chat.id,
+              externalId: String(message.message_id),
+              fromMe: true,
+              status: Prisma.MessageStatus.Delivered,
+              content: {
+                create: {
+                  text: message.text ?? message.caption,
+                  attachments: {
+                    create: await this.createAttachment(bot, message),
                   },
+                  buttons: undefined,
                 },
-                buttons: true,
               },
             },
-            createdAt: true,
-            updatedAt: true,
-          },
-        }),
+            select: {
+              id: true,
+              fromMe: true,
+              status: true,
+              chat: {
+                select: {
+                  id: true,
+                },
+              },
+              content: {
+                orderBy: {
+                  id: 'desc',
+                },
+                take: 1,
+                select: {
+                  text: true,
+                  attachments: {
+                    select: {
+                      type: true,
+                      url: true,
+                      name: true,
+                    },
+                  },
+                  buttons: true,
+                },
+              },
+              createdAt: true,
+              updatedAt: true,
+            },
+          }),
+        ),
       ),
     );
   }

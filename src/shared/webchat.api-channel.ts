@@ -1,9 +1,12 @@
 import * as Prisma from '@prisma/client';
 import axios from 'axios';
+import { plainToClass } from 'class-transformer';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { WebchatEventDto } from 'src/channel/dto/webchat-event.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
+import { Chat } from 'src/chat/entities/chat.entity';
+import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
 import { ButtonType } from 'src/hsm/enums/button-type.enum';
 import * as uuid from 'uuid';
 import { ApiChannel } from './api-channel.interface';
@@ -28,87 +31,72 @@ export class WebchatApiChannel extends ApiChannel<WebchatEventDto> {
     event: WebchatEventDto,
     webhookSenderService: WebhookSenderService,
   ): Promise<'ok'> {
-    const chat = await this.prismaService.chat.upsert({
-      where: {
-        channelId_accountId: {
-          channelId: channel.id,
+    const chat = plainToClass(
+      Chat,
+      await this.prismaService.chat.upsert({
+        where: {
+          channelId_accountId: {
+            channelId: channel.id,
+            accountId: event.session_id,
+          },
+        },
+        create: {
           accountId: event.session_id,
-        },
-      },
-      create: {
-        accountId: event.session_id,
-        contact: {
-          create: {
-            name: 'N/A',
-            username: event.session_id,
-          },
-        },
-        channel: {
-          connect: {
-            id: channel.id,
-          },
-        },
-      },
-      update: {
-        isNew: false,
-      },
-      select: {
-        id: true,
-        isNew: true,
-        contact: {
-          select: {
-            username: true,
-            name: true,
-            avatarUrl: true,
-          },
-        },
-      },
-    });
-
-    const message = await this.prismaService.message.create({
-      data: {
-        chatId: chat.id,
-        fromMe: false,
-        status: Prisma.MessageStatus.Delivered,
-        content: {
-          create: {
-            text: event.message,
-            attachments: undefined,
-            buttons: undefined,
-          },
-        },
-        externalId: uuid.v4(),
-      },
-      select: {
-        id: true,
-        fromMe: true,
-        status: true,
-        chat: {
-          select: {
-            id: true,
-          },
-        },
-        content: {
-          orderBy: {
-            id: 'desc',
-          },
-          take: 1,
-          select: {
-            text: true,
-            attachments: {
-              select: {
-                type: true,
-                url: true,
-                name: true,
-              },
+          contact: {
+            create: {
+              name: 'N/A',
+              username: event.session_id,
             },
-            buttons: true,
+          },
+          channel: {
+            connect: {
+              id: channel.id,
+            },
           },
         },
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+        update: {
+          isNew: false,
+        },
+        include: {
+          contact: true,
+        },
+      }),
+    );
+
+    const message = plainToClass(
+      MessageWithChatId,
+      await this.prismaService.message.create({
+        data: {
+          chatId: chat.id,
+          fromMe: false,
+          status: Prisma.MessageStatus.Delivered,
+          content: {
+            create: {
+              text: event.message,
+              attachments: undefined,
+              buttons: undefined,
+            },
+          },
+          externalId: uuid.v4(),
+        },
+        include: {
+          chat: {
+            select: {
+              id: true,
+            },
+          },
+          content: {
+            orderBy: {
+              id: 'desc',
+            },
+            take: 1,
+            include: {
+              attachments: true,
+            },
+          },
+        },
+      }),
+    );
 
     await webhookSenderService.dispatchAsync(channel.projectId, {
       type: Prisma.WebhookEventType.IncomingChats,
@@ -130,7 +118,7 @@ export class WebchatApiChannel extends ApiChannel<WebchatEventDto> {
     channel: Prisma.Channel,
     chat: Prisma.Chat,
     message: CreateMessageDto,
-  ): Promise<any[]> {
+  ): Promise<MessageWithChatId[]> {
     const messages: any[] = [];
 
     if (message.attachments) {
@@ -177,58 +165,48 @@ export class WebchatApiChannel extends ApiChannel<WebchatEventDto> {
 
     return Promise.all(
       messages.map((message) =>
-        this.prismaService.message.create({
-          data: {
-            chatId: chat.id,
-            externalId: message.message_id,
-            fromMe: true,
-            status: Prisma.MessageStatus.Delivered,
-            content: {
-              create: {
-                text: message.text,
-                attachments: {
-                  create: message.attachment && {
-                    type: Prisma.AttachmentType.Image,
-                    url: message.attachment.payload.src,
+        plainToClass(
+          MessageWithChatId,
+          this.prismaService.message.create({
+            data: {
+              chatId: chat.id,
+              externalId: message.message_id,
+              fromMe: true,
+              status: Prisma.MessageStatus.Delivered,
+              content: {
+                create: {
+                  text: message.text,
+                  attachments: {
+                    create: message.attachment && {
+                      type: Prisma.AttachmentType.Image,
+                      url: message.attachment.payload.src,
+                    },
                   },
+                  buttons: message.quick_replies?.map((button: any) => ({
+                    ...button,
+                    type: ButtonType.QuickReply,
+                  })),
                 },
-                buttons: message.quick_replies?.map((button: any) => ({
-                  ...button,
-                  type: ButtonType.QuickReply,
-                })),
               },
             },
-          },
-          select: {
-            id: true,
-            fromMe: true,
-            status: true,
-            chat: {
-              select: {
-                id: true,
-              },
-            },
-            content: {
-              orderBy: {
-                id: 'desc',
-              },
-              take: 1,
-              select: {
-                text: true,
-                attachments: {
-                  select: {
-                    type: true,
-                    url: true,
-                    name: true,
-                  },
+            include: {
+              chat: {
+                select: {
+                  id: true,
                 },
-                buttons: true,
+              },
+              content: {
+                orderBy: {
+                  id: 'desc',
+                },
+                take: 1,
+                include: {
+                  attachments: true,
+                },
               },
             },
-            createdAt: true,
-            updatedAt: true,
-          },
-        }),
+          }),
+        ),
       ),
     );
   }

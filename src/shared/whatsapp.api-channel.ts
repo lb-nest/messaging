@@ -3,6 +3,7 @@ import * as Prisma from '@prisma/client';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
+import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
 import { ApiChannel } from './api-channel.interface';
 import { WebhookSenderService } from './webhook-sender.service';
 
@@ -18,7 +19,7 @@ export class WhatsappApiChannel extends ApiChannel {
     channel: Prisma.Channel,
     chat: Prisma.Chat,
     message: CreateMessageDto,
-  ): Promise<any[]> {
+  ): Promise<MessageWithChatId[]> {
     throw new NotImplementedException();
   }
 

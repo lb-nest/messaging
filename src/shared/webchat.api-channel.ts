@@ -1,4 +1,3 @@
-import { ConfigService } from '@nestjs/config';
 import * as Prisma from '@prisma/client';
 import axios from 'axios';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
@@ -6,34 +5,30 @@ import { WebchatEventDto } from 'src/channel/dto/webchat-event.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
 import { ButtonType } from 'src/hsm/enums/button-type.enum';
-import { PrismaService } from 'src/prisma.service';
 import * as uuid from 'uuid';
 import { ApiChannel } from './api-channel.interface';
 import { WebhookSenderService } from './webhook-sender.service';
 
-export class WebchatApiChannel extends ApiChannel {
-  static async create(
+export class WebchatApiChannel extends ApiChannel<WebchatEventDto> {
+  async create(
     projectId: number,
-    data: CreateChannelDto,
-    prisma: PrismaService,
-    config: ConfigService,
+    createChannelDto: CreateChannelDto,
   ): Promise<Channel> {
-    return prisma.channel.create({
+    return this.prismaService.channel.create({
       data: {
         projectId,
-        ...data,
+        ...createChannelDto,
         status: Prisma.ChannelStatus.Connected,
       },
     });
   }
 
-  static async handleEvent(
+  async handle(
     channel: Prisma.Channel,
     event: WebchatEventDto,
-    prisma: PrismaService,
-    webhookSender: WebhookSenderService,
+    webhookSenderService: WebhookSenderService,
   ): Promise<'ok'> {
-    const chat = await prisma.chat.upsert({
+    const chat = await this.prismaService.chat.upsert({
       where: {
         channelId_accountId: {
           channelId: channel.id,
@@ -70,7 +65,7 @@ export class WebchatApiChannel extends ApiChannel {
       },
     });
 
-    const message = await prisma.message.create({
+    const message = await this.prismaService.message.create({
       data: {
         chatId: chat.id,
         fromMe: false,
@@ -115,7 +110,7 @@ export class WebchatApiChannel extends ApiChannel {
       },
     });
 
-    await webhookSender.dispatchAsync(channel.projectId, {
+    await webhookSenderService.dispatchAsync(channel.projectId, {
       type: Prisma.WebhookEventType.IncomingChats,
       payload: {
         ...chat,
@@ -123,7 +118,7 @@ export class WebchatApiChannel extends ApiChannel {
       },
     });
 
-    await webhookSender.dispatchAsync(channel.projectId, {
+    await webhookSenderService.dispatchAsync(channel.projectId, {
       type: Prisma.WebhookEventType.IncomingMessages,
       payload: [message],
     });
@@ -131,7 +126,11 @@ export class WebchatApiChannel extends ApiChannel {
     return 'ok';
   }
 
-  async send(chat: Prisma.Chat, message: CreateMessageDto): Promise<any[]> {
+  async send(
+    channel: Prisma.Channel,
+    chat: Prisma.Chat,
+    message: CreateMessageDto,
+  ): Promise<any[]> {
     const messages: any[] = [];
 
     if (message.attachments) {

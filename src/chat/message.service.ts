@@ -35,13 +35,9 @@ export class MessageService {
       },
     });
 
-    const channel = new this.apiChannelRepository[chat.channel.type](
-      chat.channel,
-      this.prismaService,
-      this.configService,
-    );
-
-    const messages = await channel.send(chat, createMessageDto);
+    const messages = await this.apiChannelRepository
+      .get(chat.channel.type)
+      .send(chat.channel, chat, createMessageDto);
 
     await this.webhookSenderService.dispatchAsync(projectId, {
       type: WebhookEventType.OutgoingChats,

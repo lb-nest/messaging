@@ -69,7 +69,7 @@ export class ChannelController {
   }
 
   @Post(':id/webhook')
-  handleEvent(@Param('id') id: string, @Body() event: any) {
-    return this.channelService.handleEvent(Number(id), event);
+  handle(@Param('id') id: string, @Body() event: any) {
+    return this.channelService.handle(Number(id), event);
   }
 }

@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma.service';
 import { ApiChannelRepository } from 'src/shared/api-channel.repository';
 import { WebhookSenderService } from 'src/shared/webhook-sender.service';
@@ -11,18 +10,17 @@ import { Channel } from './entities/channel.entity';
 export class ChannelService {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly configService: ConfigService,
     private readonly apiChannelRepository: ApiChannelRepository,
     private readonly webhookSenderService: WebhookSenderService,
   ) {}
 
-  async create(projectId: number, data: CreateChannelDto): Promise<Channel> {
-    return this.apiChannelRepository[data.type].create(
-      projectId,
-      data,
-      this.prismaService,
-      this.configService,
-    );
+  async create(
+    projectId: number,
+    createChannelDto: CreateChannelDto,
+  ): Promise<Channel> {
+    return this.apiChannelRepository
+      .get(createChannelDto.type)
+      .create(projectId, createChannelDto);
   }
 
   async findAll(projectId: number): Promise<Channel[]> {
@@ -71,18 +69,15 @@ export class ChannelService {
     });
   }
 
-  async handleEvent(channelId: number, event: any): Promise<'ok'> {
+  async handle(channelId: number, event: any): Promise<'ok'> {
     const channel = await this.prismaService.channel.findUnique({
       where: {
         id: channelId,
       },
     });
 
-    return this.apiChannelRepository[channel.type].handleEvent(
-      channel,
-      event,
-      this.prismaService,
-      this.webhookSenderService,
-    );
+    return this.apiChannelRepository
+      .get(channel.type)
+      .handle(channel, event, this.webhookSenderService);
   }
 }

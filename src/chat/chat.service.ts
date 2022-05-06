@@ -1,10 +1,8 @@
 import {
-  BadRequestException,
   Injectable,
   NotFoundException,
   NotImplementedException,
 } from '@nestjs/common';
-import { ChannelType } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
@@ -15,25 +13,6 @@ export class ChatService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async create(projectId: number, createChatDto: CreateChatDto): Promise<Chat> {
-    const channel = await this.prismaService.channel.findUnique({
-      where: {
-        projectId_id: {
-          projectId,
-          id: createChatDto.channelId,
-        },
-      },
-    });
-
-    switch (channel.type) {
-      case ChannelType.Telegram:
-        throw new BadRequestException(
-          'Telegram does not allow adding a contact directly',
-        );
-
-      default:
-        break;
-    }
-
     throw new NotImplementedException();
   }
 

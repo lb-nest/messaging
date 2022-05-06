@@ -227,6 +227,9 @@ export class WhatsappApiChannel extends ApiChannel {
         update: {
           isNew: false,
         },
+        include: {
+          contact: true,
+        },
       }),
     );
 

@@ -1,5 +1,4 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { WebhookEventType } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { ApiChannelRepository } from 'src/shared/api-channel.repository';
@@ -12,7 +11,6 @@ import { MessageWithChatId } from './entities/message-with-chat-id.entity';
 export class MessageService {
   constructor(
     private readonly prismaService: PrismaService,
-    private readonly configService: ConfigService,
     private readonly webhookSenderService: WebhookSenderService,
     private readonly apiChannelRepository: ApiChannelRepository,
   ) {}
@@ -32,6 +30,15 @@ export class MessageService {
       include: {
         contact: true,
         channel: true,
+      },
+    });
+
+    await this.prismaService.chat.update({
+      where: {
+        id: chat.id,
+      },
+      data: {
+        updatedAt: new Date(),
       },
     });
 

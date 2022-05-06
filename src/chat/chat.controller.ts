@@ -10,6 +10,7 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { Auth } from 'src/auth/auth.decorator';
 import { TokenPayload } from 'src/auth/entities/token-payload.entity';
 import { TransformInterceptor } from 'src/shared/interceptors/transform.interceptor';
@@ -40,10 +41,15 @@ export class ChatController {
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(new TransformInterceptor(Chat))
   @Get()
-  findAll(@Auth() user: TokenPayload, @Query('ids') ids?: string) {
+  findAll(
+    @Auth() user: TokenPayload,
+    @Query('ids') ids?: string,
+    @Query('orderBy') orderBy?: Prisma.SortOrder,
+  ) {
     return this.chatService.findAll(
       user.project.id,
       ids?.split(',').map(Number),
+      orderBy,
     );
   }
 

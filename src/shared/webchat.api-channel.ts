@@ -26,6 +26,102 @@ export class WebchatApiChannel extends ApiChannel<WebchatEventDto> {
     });
   }
 
+  async send(
+    channel: Prisma.Channel,
+    chat: Prisma.Chat,
+    message: CreateMessageDto,
+  ): Promise<MessageWithChatId[]> {
+    const url = this.configService.get<string>('WEBSOCKET_EDGE_URL');
+    const messages: any[] = [];
+
+    if (message.text) {
+      const res = await axios.post<any>(
+        url.concat(`/sessions/${chat.accountId}/messages`),
+        {
+          text: message.text,
+          quick_replies: message.buttons
+            ?.filter(({ type }) => type === ButtonType.QuickReply)
+            .map(({ text }) => ({
+              content_type: 'text',
+              title: text,
+              payload: text,
+            })),
+        },
+      );
+
+      messages.push(res.data);
+    }
+
+    if (message.attachments) {
+      const res = await Promise.all(
+        message.attachments
+          .filter(({ type }) => type === Prisma.AttachmentType.Image)
+          .map((attachment) =>
+            axios.post<any>(
+              url.concat(`/sessions/${chat.accountId}/messages`),
+              {
+                attachment: {
+                  type: 'image',
+                  payload: {
+                    src: attachment.url,
+                  },
+                },
+              },
+            ),
+          ),
+      );
+
+      messages.push(...res.map(({ data }) => data));
+    }
+
+    return Promise.all(
+      messages.map(async (message) =>
+        plainToClass(
+          MessageWithChatId,
+          await this.prismaService.message.create({
+            data: {
+              chatId: chat.id,
+              externalId: message.message_id,
+              fromMe: true,
+              status: Prisma.MessageStatus.Delivered,
+              content: {
+                create: {
+                  text: message.text,
+                  attachments: {
+                    create: message.attachment && {
+                      type: Prisma.AttachmentType.Image,
+                      url: message.attachment.payload.src,
+                    },
+                  },
+                  buttons: message.quick_replies?.map((button: any) => ({
+                    ...button,
+                    type: ButtonType.QuickReply,
+                  })),
+                },
+              },
+            },
+            include: {
+              chat: {
+                select: {
+                  id: true,
+                },
+              },
+              content: {
+                orderBy: {
+                  id: 'desc',
+                },
+                take: 1,
+                include: {
+                  attachments: true,
+                },
+              },
+            },
+          }),
+        ),
+      ),
+    );
+  }
+
   async handle(
     channel: Prisma.Channel,
     event: WebchatEventDto,
@@ -112,102 +208,5 @@ export class WebchatApiChannel extends ApiChannel<WebchatEventDto> {
     });
 
     return 'ok';
-  }
-
-  async send(
-    channel: Prisma.Channel,
-    chat: Prisma.Chat,
-    message: CreateMessageDto,
-  ): Promise<MessageWithChatId[]> {
-    const messages: any[] = [];
-
-    if (message.attachments) {
-      const url = this.configService.get<string>('WEBSOCKET_EDGE_URL');
-      const res = await Promise.all(
-        message.attachments
-          .filter(({ type }) => type === Prisma.AttachmentType.Image)
-          .map((attachment) =>
-            axios.post<any>(
-              url.concat(`/sessions/${chat.accountId}/messages`),
-              {
-                attachment: {
-                  type: 'image',
-                  payload: {
-                    src: attachment.url,
-                  },
-                },
-              },
-            ),
-          ),
-      );
-
-      messages.push(...res.map(({ data }) => data));
-    }
-
-    if (message.text) {
-      const url = this.configService.get<string>('WEBSOCKET_EDGE_URL');
-      const res = await axios.post<any>(
-        url.concat(`/sessions/${chat.accountId}/messages`),
-        {
-          text: message.text,
-          quick_replies: message.buttons
-            ?.filter((button) => button.type === ButtonType.QuickReply)
-            .map((button: any) => ({
-              content_type: 'text',
-              title: button.title,
-              payload: button.payload,
-            })),
-        },
-      );
-
-      messages.push(res.data);
-    }
-
-    return Promise.all(
-      messages.map((message) =>
-        plainToClass(
-          MessageWithChatId,
-          this.prismaService.message.create({
-            data: {
-              chatId: chat.id,
-              externalId: message.message_id,
-              fromMe: true,
-              status: Prisma.MessageStatus.Delivered,
-              content: {
-                create: {
-                  text: message.text,
-                  attachments: {
-                    create: message.attachment && {
-                      type: Prisma.AttachmentType.Image,
-                      url: message.attachment.payload.src,
-                    },
-                  },
-                  buttons: message.quick_replies?.map((button: any) => ({
-                    ...button,
-                    type: ButtonType.QuickReply,
-                  })),
-                },
-              },
-            },
-            include: {
-              chat: {
-                select: {
-                  id: true,
-                },
-              },
-              content: {
-                orderBy: {
-                  id: 'desc',
-                },
-                take: 1,
-                include: {
-                  attachments: true,
-                },
-              },
-            },
-          }),
-        ),
-      ),
-    );
   }
 }

@@ -28,5 +28,5 @@ export abstract class ApiChannel<T = unknown> {
     channel: Prisma.Channel,
     event: T,
     webhookSenderService: WebhookSenderService,
-  ): Promise<'ok'>;
+  ): Promise<unknown>;
 }

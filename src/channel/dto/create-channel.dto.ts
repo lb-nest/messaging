@@ -1,6 +1,6 @@
 import { ChannelType } from '@prisma/client';
 import { Transform, TransformFnParams } from 'class-transformer';
-import { IsEnum, IsNotEmpty } from 'class-validator';
+import { IsEnum, IsNotEmpty, ValidateIf } from 'class-validator';
 
 export class CreateChannelDto {
   @IsNotEmpty()
@@ -9,6 +9,11 @@ export class CreateChannelDto {
 
   @IsEnum(ChannelType)
   type: ChannelType;
+
+  @ValidateIf((object) => object.type === ChannelType.Whatsapp)
+  @IsNotEmpty()
+  @Transform(({ value }: TransformFnParams) => value.trim())
+  accountId?: string;
 
   @IsNotEmpty()
   @Transform(({ value }: TransformFnParams) => value.trim())

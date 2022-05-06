@@ -28,6 +28,7 @@ model Channel {
   name      String
   type      ChannelType
   status    ChannelStatus
+  accountId String?       @unique
   token     String
   chats     Chat[]
   approval  Approval[]

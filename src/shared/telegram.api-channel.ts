@@ -31,6 +31,91 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
     return channel;
   }
 
+  async send(
+    channel: Prisma.Channel,
+    chat: Prisma.Chat,
+    message: CreateMessageDto,
+  ): Promise<MessageWithChatId[]> {
+    const messages: TelegramBot.Message[] = [];
+    const bot = new TelegramBot(channel.token);
+
+    if (message.text) {
+      messages.push(
+        await bot.sendMessage(chat.accountId, message.text, {
+          reply_markup: undefined,
+        }),
+      );
+    }
+
+    await Promise.all(
+      message.attachments.map(async (attachment) => {
+        switch (attachment.type) {
+          case Prisma.AttachmentType.Audio:
+            messages.push(await bot.sendAudio(chat.accountId, attachment.url));
+            break;
+
+          case Prisma.AttachmentType.Document:
+          case Prisma.AttachmentType.Video:
+            messages.push(
+              await bot.sendDocument(chat.accountId, attachment.url, {
+                caption: attachment.name,
+              }),
+            );
+            break;
+
+          case Prisma.AttachmentType.Image:
+            messages.push(
+              await bot.sendPhoto(chat.accountId, attachment.url, {
+                caption: attachment.name,
+              }),
+            );
+            break;
+        }
+      }),
+    );
+
+    return Promise.all(
+      messages.map(async (message) =>
+        plainToClass(
+          MessageWithChatId,
+          await this.prismaService.message.create({
+            data: {
+              chatId: chat.id,
+              externalId: String(message.message_id),
+              fromMe: true,
+              status: Prisma.MessageStatus.Delivered,
+              content: {
+                create: {
+                  text: message.text ?? message.caption,
+                  attachments: {
+                    create: await this.createAttachment(bot, message),
+                  },
+                  buttons: undefined,
+                },
+              },
+            },
+            include: {
+              chat: {
+                select: {
+                  id: true,
+                },
+              },
+              content: {
+                orderBy: {
+                  id: 'desc',
+                },
+                take: 1,
+                include: {
+                  attachments: true,
+                },
+              },
+            },
+          }),
+        ),
+      ),
+    );
+  }
+
   async handle(
     channel: Prisma.Channel,
     event: TelegramBot.Update,
@@ -142,102 +227,6 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
     });
 
     return 'ok';
-  }
-
-  async send(
-    channel: Prisma.Channel,
-    chat: Prisma.Chat,
-    message: CreateMessageDto,
-  ): Promise<MessageWithChatId[]> {
-    const bot = new TelegramBot(channel.token);
-
-    const messages: TelegramBot.Message[] = [];
-
-    if (message.text) {
-      messages.push(
-        await bot.sendMessage(chat.accountId, message.text, {
-          reply_markup: undefined,
-        }),
-      );
-    }
-
-    if (message.attachments.length > 0) {
-      const attachments = await Promise.all(
-        message.attachments.map((attachment) => {
-          switch (attachment.type) {
-            case Prisma.AttachmentType.Audio:
-              return bot.sendAudio(chat.accountId, attachment.url);
-
-            case Prisma.AttachmentType.Document:
-            case Prisma.AttachmentType.Video:
-              return bot.sendDocument(chat.accountId, attachment.url, {
-                caption: attachment.name,
-              });
-
-            case Prisma.AttachmentType.Image:
-              return bot.sendPhoto(chat.accountId, attachment.url, {
-                caption: attachment.name,
-              });
-          }
-        }),
-      );
-
-      messages.push(...attachments);
-    }
-
-    return Promise.all(
-      messages.map(async (message) =>
-        plainToClass(
-          MessageWithChatId,
-          this.prismaService.message.create({
-            data: {
-              chatId: chat.id,
-              externalId: String(message.message_id),
-              fromMe: true,
-              status: Prisma.MessageStatus.Delivered,
-              content: {
-                create: {
-                  text: message.text ?? message.caption,
-                  attachments: {
-                    create: await this.createAttachment(bot, message),
-                  },
-                  buttons: undefined,
-                },
-              },
-            },
-            select: {
-              id: true,
-              fromMe: true,
-              status: true,
-              chat: {
-                select: {
-                  id: true,
-                },
-              },
-              content: {
-                orderBy: {
-                  id: 'desc',
-                },
-                take: 1,
-                select: {
-                  text: true,
-                  attachments: {
-                    select: {
-                      type: true,
-                      url: true,
-                      name: true,
-                    },
-                  },
-                  buttons: true,
-                },
-              },
-              createdAt: true,
-              updatedAt: true,
-            },
-          }),
-        ),
-      ),
-    );
   }
 
   private async createContact(

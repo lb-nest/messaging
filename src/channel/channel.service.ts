@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { ApiChannelRepository } from 'src/shared/api-channel.repository';
 import { WebhookSenderService } from 'src/shared/webhook-sender.service';
@@ -69,11 +70,20 @@ export class ChannelService {
     });
   }
 
-  async handle(channelId: number, event: any): Promise<'ok'> {
-    const channel = await this.prismaService.channel.findUnique({
-      where: {
+  async handle(channelId: number, event: any): Promise<unknown> {
+    let where: Prisma.ChannelWhereUniqueInput;
+    if (!Number.isNaN(channelId)) {
+      where = {
         id: channelId,
-      },
+      };
+    } else {
+      where = {
+        accountId: event.app,
+      };
+    }
+
+    const channel = await this.prismaService.channel.findUnique({
+      where,
     });
 
     return this.apiChannelRepository

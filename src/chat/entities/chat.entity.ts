@@ -8,6 +8,7 @@ export class Chat {
   @Exclude()
   channelId: number;
 
+  @Type(() => Contact)
   contact: Contact;
 
   @Exclude()

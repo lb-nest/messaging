@@ -52,6 +52,8 @@ model Chat {
   accountId String
   isNew     Boolean   @default(true)
   messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@unique([channelId, accountId])
 }

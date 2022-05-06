@@ -17,11 +17,7 @@ export class ChatService {
     throw new NotImplementedException();
   }
 
-  async findAll(
-    projectId: number,
-    ids?: number[],
-    orderBy: Prisma.SortOrder = 'desc',
-  ): Promise<Chat[]> {
+  async findAll(projectId: number, ids?: number[]): Promise<Chat[]> {
     return this.prismaService.chat.findMany({
       where: {
         id: {
@@ -32,7 +28,7 @@ export class ChatService {
         },
       },
       orderBy: {
-        id: orderBy,
+        updatedAt: 'desc',
       },
       include: {
         contact: true,

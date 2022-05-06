@@ -41,15 +41,10 @@ export class ChatController {
   @UseGuards(JwtAuthGuard)
   @UseInterceptors(new TransformInterceptor(Chat))
   @Get()
-  findAll(
-    @Auth() user: TokenPayload,
-    @Query('ids') ids?: string,
-    @Query('orderBy') orderBy?: Prisma.SortOrder,
-  ) {
+  findAll(@Auth() user: TokenPayload, @Query('ids') ids?: string) {
     return this.chatService.findAll(
       user.project.id,
       ids?.split(',').map(Number),
-      orderBy,
     );
   }
 

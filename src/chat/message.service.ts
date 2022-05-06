@@ -70,6 +70,9 @@ export class MessageService {
           },
         },
       },
+      orderBy: {
+        id: 'desc',
+      },
       include: {
         chat: {
           select: {

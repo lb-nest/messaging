@@ -12,7 +12,7 @@ export class CreateChannelDto {
 
   @ValidateIf((object) => object.type === ChannelType.Whatsapp)
   @IsNotEmpty()
-  @Transform(({ value }: TransformFnParams) => value.trim())
+  @Transform(({ value }: TransformFnParams) => value?.trim())
   accountId?: string;
 
   @IsNotEmpty()

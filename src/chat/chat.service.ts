@@ -3,6 +3,7 @@ import {
   NotFoundException,
   NotImplementedException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
@@ -16,7 +17,11 @@ export class ChatService {
     throw new NotImplementedException();
   }
 
-  async findAll(projectId: number, ids?: number[]): Promise<Chat[]> {
+  async findAll(
+    projectId: number,
+    ids?: number[],
+    orderBy?: Prisma.SortOrder,
+  ): Promise<Chat[]> {
     return this.prismaService.chat.findMany({
       where: {
         id: {
@@ -27,7 +32,7 @@ export class ChatService {
         },
       },
       orderBy: {
-        updatedAt: 'desc',
+        id: orderBy,
       },
       include: {
         contact: true,

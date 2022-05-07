@@ -105,7 +105,11 @@ export class WhatsappApiChannel extends ApiChannel {
             fromMe: true,
             status: Prisma.MessageStatus.Accepted,
             content: {
-              create: attachment,
+              create: {
+                attachments: {
+                  create: attachment,
+                },
+              },
             },
           });
         }),
@@ -347,7 +351,7 @@ export class WhatsappApiChannel extends ApiChannel {
         channel: 'whatsapp',
         source,
         destination,
-        message: qs.stringify(message),
+        message: JSON.stringify(message),
         'src.name': sourceName,
       }),
       {

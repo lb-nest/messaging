@@ -1,4 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateHsmDto } from './dto/create-hsm.dto';
 import { UpdateHsmDto } from './dto/update-hsm.dto';
@@ -9,19 +14,27 @@ export class HsmService {
   constructor(private readonly prismaService: PrismaService) {}
 
   async create(projectId: number, createHsmDto: CreateHsmDto): Promise<Hsm> {
-    return this.prismaService.templateMessage.create({
-      data: {
-        projectId,
-        ...createHsmDto,
-      },
-      include: {
-        approval: {
-          include: {
-            channel: true,
+    const hsm = await this.prismaService.templateMessage
+      .create({
+        data: {
+          projectId,
+          ...createHsmDto,
+        },
+        include: {
+          approval: {
+            include: {
+              channel: true,
+            },
           },
         },
-      },
-    });
+      })
+      .catch(() => undefined);
+
+    if (!hsm) {
+      throw new ConflictException();
+    }
+
+    return hsm;
   }
 
   async findAll(projectId: number): Promise<Hsm[]> {
@@ -40,7 +53,7 @@ export class HsmService {
   }
 
   async findOne(projectId: number, id: number): Promise<Hsm> {
-    return this.prismaService.templateMessage.findUnique({
+    const hsm = await this.prismaService.templateMessage.findUnique({
       where: {
         projectId_id: {
           projectId,
@@ -55,6 +68,12 @@ export class HsmService {
         },
       },
     });
+
+    if (!hsm) {
+      throw new BadRequestException();
+    }
+
+    return hsm;
   }
 
   async update(
@@ -62,39 +81,55 @@ export class HsmService {
     id: number,
     updateHsmDto: UpdateHsmDto,
   ): Promise<Hsm> {
-    return this.prismaService.templateMessage.update({
-      where: {
-        projectId_id: {
-          projectId,
-          id,
-        },
-      },
-      data: updateHsmDto,
-      include: {
-        approval: {
-          include: {
-            channel: true,
+    const hsm = await this.prismaService.templateMessage
+      .update({
+        where: {
+          projectId_id: {
+            projectId,
+            id,
           },
         },
-      },
-    });
+        data: updateHsmDto,
+        include: {
+          approval: {
+            include: {
+              channel: true,
+            },
+          },
+        },
+      })
+      .catch(() => undefined);
+
+    if (!hsm) {
+      throw new NotFoundException();
+    }
+
+    return hsm;
   }
 
   async delete(projectId: number, id: number): Promise<Hsm> {
-    return this.prismaService.templateMessage.delete({
-      where: {
-        projectId_id: {
-          projectId,
-          id,
-        },
-      },
-      include: {
-        approval: {
-          include: {
-            channel: true,
+    const hsm = await this.prismaService.templateMessage
+      .delete({
+        where: {
+          projectId_id: {
+            projectId,
+            id,
           },
         },
-      },
-    });
+        include: {
+          approval: {
+            include: {
+              channel: true,
+            },
+          },
+        },
+      })
+      .catch(() => undefined);
+
+    if (!hsm) {
+      throw new NotFoundException();
+    }
+
+    return hsm;
   }
 }

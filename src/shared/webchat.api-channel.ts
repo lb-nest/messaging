@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import * as Prisma from '@prisma/client';
 import axios from 'axios';
 import { plainToClass } from 'class-transformer';
@@ -17,13 +18,17 @@ export class WebchatApiChannel extends ApiChannel<WebchatEventDto> {
     projectId: number,
     createChannelDto: CreateChannelDto,
   ): Promise<Channel> {
-    return this.prismaService.channel.create({
-      data: {
-        projectId,
-        ...createChannelDto,
-        status: Prisma.ChannelStatus.Connected,
-      },
-    });
+    try {
+      return await this.prismaService.channel.create({
+        data: {
+          projectId,
+          ...createChannelDto,
+          status: Prisma.ChannelStatus.Connected,
+        },
+      });
+    } catch {
+      throw new BadRequestException();
+    }
   }
 
   async send(

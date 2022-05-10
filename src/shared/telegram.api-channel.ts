@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import * as Prisma from '@prisma/client';
 import { plainToClass } from 'class-transformer';
 import TelegramBot from 'node-telegram-bot-api';
@@ -14,21 +15,25 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
     projectId: number,
     createChannelDto: CreateChannelDto,
   ): Promise<Channel> {
-    const bot = new TelegramBot(createChannelDto.token);
-    await bot.getMe();
+    try {
+      const bot = new TelegramBot(createChannelDto.token);
+      await bot.getMe();
 
-    const channel = await this.prismaService.channel.create({
-      data: {
-        projectId,
-        ...createChannelDto,
-        status: Prisma.ChannelStatus.Connected,
-      },
-    });
+      const channel = await this.prismaService.channel.create({
+        data: {
+          projectId,
+          ...createChannelDto,
+          status: Prisma.ChannelStatus.Connected,
+        },
+      });
 
-    const url = this.configService.get<string>('MESSAGING_URL');
-    await bot.setWebHook(url.concat(`/channels/${channel.id}/webhook`));
+      const url = this.configService.get<string>('MESSAGING_URL');
+      await bot.setWebHook(url.concat(`/channels/${channel.id}/webhook`));
 
-    return channel;
+      return channel;
+    } catch {
+      throw new BadRequestException();
+    }
   }
 
   async send(

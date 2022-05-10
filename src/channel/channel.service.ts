@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { ApiChannelRepository } from 'src/shared/api-channel.repository';
@@ -33,7 +37,7 @@ export class ChannelService {
   }
 
   async findOne(projectId: number, id: number): Promise<Channel> {
-    return this.prismaService.channel.findUnique({
+    const channel = await this.prismaService.channel.findUnique({
       where: {
         projectId_id: {
           projectId,
@@ -41,6 +45,12 @@ export class ChannelService {
         },
       },
     });
+
+    if (!channel) {
+      throw new NotFoundException();
+    }
+
+    return channel;
   }
 
   async update(
@@ -48,26 +58,42 @@ export class ChannelService {
     id: number,
     updateChannelDto: UpdateChannelDto,
   ): Promise<Channel> {
-    return this.prismaService.channel.update({
-      where: {
-        projectId_id: {
-          projectId,
-          id,
+    const channel = await this.prismaService.channel
+      .update({
+        where: {
+          projectId_id: {
+            projectId,
+            id,
+          },
         },
-      },
-      data: updateChannelDto,
-    });
+        data: updateChannelDto,
+      })
+      .catch(() => undefined);
+
+    if (!channel) {
+      throw new NotFoundException();
+    }
+
+    return channel;
   }
 
   async delete(projectId: number, id: number): Promise<Channel> {
-    return this.prismaService.channel.delete({
-      where: {
-        projectId_id: {
-          projectId,
-          id,
+    const channel = await this.prismaService.channel
+      .delete({
+        where: {
+          projectId_id: {
+            projectId,
+            id,
+          },
         },
-      },
-    });
+      })
+      .catch(() => undefined);
+
+    if (!channel) {
+      throw new BadRequestException();
+    }
+
+    return channel;
   }
 
   async handle(channelId: number, event: any): Promise<unknown> {

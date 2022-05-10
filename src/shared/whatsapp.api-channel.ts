@@ -19,13 +19,17 @@ export class WhatsappApiChannel extends ApiChannel {
     projectId: number,
     createChannelDto: CreateChannelDto,
   ): Promise<Channel> {
-    return this.prismaService.channel.create({
-      data: {
-        projectId,
-        ...createChannelDto,
-        status: Prisma.ChannelStatus.Connected,
-      },
-    });
+    try {
+      return await this.prismaService.channel.create({
+        data: {
+          projectId,
+          ...createChannelDto,
+          status: Prisma.ChannelStatus.Connected,
+        },
+      });
+    } catch {
+      throw new BadRequestException();
+    }
   }
 
   async send(

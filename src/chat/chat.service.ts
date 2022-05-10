@@ -58,7 +58,7 @@ export class ChatService {
   }
 
   async findOne(projectId: number, id: number): Promise<Chat> {
-    return this.prismaService.chat.findFirst({
+    const chat = await this.prismaService.chat.findFirst({
       where: {
         id,
         channel: {
@@ -86,6 +86,12 @@ export class ChatService {
         },
       },
     });
+
+    if (!chat) {
+      throw new NotFoundException();
+    }
+
+    return chat;
   }
 
   async update(

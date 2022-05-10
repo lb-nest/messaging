@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateWebhookDto } from './dto/create-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
@@ -12,12 +16,20 @@ export class WebhookService {
     projectId: number,
     createWebhookDto: CreateWebhookDto,
   ): Promise<Webhook> {
-    return this.prismaService.webhook.create({
-      data: {
-        projectId,
-        ...createWebhookDto,
-      },
-    });
+    const webhook = await this.prismaService.webhook
+      .create({
+        data: {
+          projectId,
+          ...createWebhookDto,
+        },
+      })
+      .catch(() => undefined);
+
+    if (!webhook) {
+      throw new ConflictException();
+    }
+
+    return webhook;
   }
 
   async findAll(projectId: number): Promise<Webhook[]> {
@@ -29,7 +41,7 @@ export class WebhookService {
   }
 
   async findOne(projectId: number, id: number): Promise<Webhook> {
-    return this.prismaService.webhook.findUnique({
+    const webhook = await this.prismaService.webhook.findUnique({
       where: {
         projectId_id: {
           projectId,
@@ -37,6 +49,12 @@ export class WebhookService {
         },
       },
     });
+
+    if (!webhook) {
+      throw new NotFoundException();
+    }
+
+    return webhook;
   }
 
   async update(
@@ -44,25 +62,41 @@ export class WebhookService {
     id: number,
     updateWebhookDto: UpdateWebhookDto,
   ): Promise<Webhook> {
-    return this.prismaService.webhook.update({
-      where: {
-        projectId_id: {
-          projectId,
-          id,
+    const webhook = await this.prismaService.webhook
+      .update({
+        where: {
+          projectId_id: {
+            projectId,
+            id,
+          },
         },
-      },
-      data: updateWebhookDto,
-    });
+        data: updateWebhookDto,
+      })
+      .catch(() => undefined);
+
+    if (!webhook) {
+      throw new NotFoundException();
+    }
+
+    return webhook;
   }
 
   async delete(projectId: number, id: number): Promise<Webhook> {
-    return this.prismaService.webhook.delete({
-      where: {
-        projectId_id: {
-          projectId,
-          id,
+    const webhook = await this.prismaService.webhook
+      .delete({
+        where: {
+          projectId_id: {
+            projectId,
+            id,
+          },
         },
-      },
-    });
+      })
+      .catch(() => undefined);
+
+    if (!webhook) {
+      throw new NotFoundException();
+    }
+
+    return webhook;
   }
 }

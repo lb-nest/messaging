@@ -9,12 +9,13 @@ import * as uuid from 'uuid';
 export class S3Service {
   private readonly s3: S3;
 
-  constructor(configService: ConfigService) {
+  constructor(private readonly configService: ConfigService) {
     this.s3 = new S3({
       credentials: {
         accessKeyId: configService.get<string>('S3_ACCESS_KEY'),
         secretAccessKey: configService.get<string>('S3_SECRET_KEY'),
       },
+      endpoint: configService.get<string>('S3_ENDPOINT'),
       s3ForcePathStyle: true,
       signatureVersion: 'v4',
     });
@@ -27,7 +28,7 @@ export class S3Service {
   ): Promise<string> {
     const res = await this.s3
       .upload({
-        Bucket: 'leadball-next',
+        Bucket: this.configService.get<string>('S3_BUCKET'),
         Key: uuid.v4(),
         ContentType: mimeType,
         ContentDisposition: fileName && contentDisposition(fileName),

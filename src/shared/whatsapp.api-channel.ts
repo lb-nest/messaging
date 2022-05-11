@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import * as Prisma from '@prisma/client';
-import { ChannelType } from '@prisma/client';
+import { ChannelType, MessageStatus } from '@prisma/client';
 import axios from 'axios';
 import { plainToClass } from 'class-transformer';
 import { GupshupClientApi, GupshupPartnerApi } from 'gupshup-api';
@@ -173,6 +173,18 @@ export class WhatsappApiChannel extends ApiChannel {
       case 'message':
         await this.handleMessage(channel, event, webhookSenderService);
         break;
+
+      case 'message-event':
+        await this.handleMessageEvent(channel, event, webhookSenderService);
+        break;
+
+      case 'user-event':
+        await this.handleUserEvent(channel, event);
+        break;
+
+      case 'system-event':
+        await this.handleSystemEvent(channel, event);
+        break;
     }
   }
 
@@ -298,6 +310,87 @@ export class WhatsappApiChannel extends ApiChannel {
       type: Prisma.WebhookEventType.IncomingMessages,
       payload: [message],
     });
+  }
+
+  private async handleMessageEvent(
+    channel: Prisma.Channel,
+    event: any,
+    webhookSenderService: WebhookSenderService,
+  ): Promise<void> {
+    const message = await this.prismaService.message.findFirst({
+      where: {
+        externalId: event.payload.id,
+      },
+    });
+
+    if (!message) {
+      return;
+    }
+
+    let status: MessageStatus;
+    switch (event.payload.type) {
+      case 'enqueued':
+        await this.prismaService.message.update({
+          where: {
+            id: message.id,
+          },
+          data: {
+            externalId: event.payload.payload.whatsappMessageId,
+          },
+        });
+        return;
+
+      case 'delivered':
+        status = MessageStatus.Delivered;
+        break;
+
+      case 'failed':
+        status = MessageStatus.Error;
+        break;
+
+      default:
+        return;
+    }
+
+    // TODO: notify message status changed
+    await this.prismaService.message.update({
+      where: {
+        id: message.id,
+      },
+      data: {
+        status,
+      },
+      // include: {
+      //   chat: {
+      //     select: {
+      //       id: true,
+      //     },
+      //   },
+      //   content: {
+      //     orderBy: {
+      //       id: 'desc',
+      //     },
+      //     take: 1,
+      //     include: {
+      //       attachments: true,
+      //     },
+      //   },
+      // },
+    });
+  }
+
+  private async handleUserEvent(
+    channel: Prisma.Channel,
+    event: any,
+  ): Promise<void> {
+    // TODO
+  }
+
+  private async handleSystemEvent(
+    channel: Prisma.Channel,
+    event: any,
+  ): Promise<void> {
+    // TODO
   }
 
   private async createContent(

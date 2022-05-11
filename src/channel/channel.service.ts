@@ -96,20 +96,11 @@ export class ChannelService {
     return channel;
   }
 
-  async handle(channelId: number, event: any): Promise<unknown> {
-    let where: Prisma.ChannelWhereUniqueInput;
-    if (!Number.isNaN(channelId)) {
-      where = {
-        id: channelId,
-      };
-    } else {
-      where = {
-        accountId: event.app,
-      };
-    }
-
+  async handle(id: number, event: any): Promise<unknown> {
     const channel = await this.prismaService.channel.findUnique({
-      where,
+      where: {
+        id,
+      },
     });
 
     return this.apiChannelRepository

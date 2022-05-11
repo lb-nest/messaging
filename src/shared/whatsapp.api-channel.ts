@@ -1,8 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 import * as Prisma from '@prisma/client';
+import { ChannelType } from '@prisma/client';
 import axios from 'axios';
 import { plainToClass } from 'class-transformer';
-import qs from 'qs';
+import { GupshupClientApi, GupshupPartnerApi } from 'gupshup-api';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
@@ -13,20 +14,42 @@ import { ApiChannel } from './api-channel.interface';
 import { WebhookSenderService } from './webhook-sender.service';
 
 export class WhatsappApiChannel extends ApiChannel {
-  private readonly url = 'https://api.gupshup.io/sm/api/v1/msg';
-
   async create(
     projectId: number,
     createChannelDto: CreateChannelDto,
   ): Promise<Channel> {
     try {
-      return await this.prismaService.channel.create({
+      const api = new GupshupPartnerApi(
+        this.configService.get<string>('GS_USER'),
+        this.configService.get<string>('GS_PASS'),
+      );
+
+      const app = await api.linkApp(
+        createChannelDto.accountId,
+        createChannelDto.token,
+      );
+
+      const token = await api.createToken(app.id);
+
+      const channel = await this.prismaService.channel.create({
         data: {
           projectId,
-          ...createChannelDto,
+          name: createChannelDto.name,
+          type: ChannelType.Whatsapp,
+          accountId: `${app.id}:${app.name}:${app.phone}`,
+          token,
           status: Prisma.ChannelStatus.Connected,
         },
       });
+
+      const url = this.configService.get<string>('MESSAGING_URL');
+      await api.setWebhook(
+        token,
+        app.id,
+        url.concat(`/channels/${channel.id}/webhook`),
+      );
+
+      return channel;
     } catch {
       throw new BadRequestException();
     }
@@ -42,18 +65,16 @@ export class WhatsappApiChannel extends ApiChannel {
     if (message.buttons) {
       messages.push(await this.sendHsm(channel, chat, message));
     } else {
+      const [, appName, phone] = channel.accountId.split(':');
+      const api = new GupshupClientApi(phone, appName, channel.token);
+
       if (message.text) {
         messages.push({
           chatId: chat.id,
-          externalId: await this.api(
-            chat.accountId,
-            channel.token,
-            channel.accountId,
-            {
-              type: 'text',
-              text: message.text,
-            },
-          ),
+          externalId: await api.sendMessage(chat.accountId, {
+            type: 'text',
+            text: message.text,
+          }),
           fromMe: true,
           status: Prisma.MessageStatus.Accepted,
           content: {
@@ -100,12 +121,7 @@ export class WhatsappApiChannel extends ApiChannel {
 
           messages.push({
             chatId: chat.id,
-            externalId: await this.api(
-              chat.accountId,
-              channel.token,
-              channel.accountId,
-              msg,
-            ),
+            externalId: await api.sendMessage(chat.accountId, msg),
             fromMe: true,
             status: Prisma.MessageStatus.Accepted,
             content: {
@@ -165,6 +181,9 @@ export class WhatsappApiChannel extends ApiChannel {
     chat: Prisma.Chat,
     message: CreateMessageDto,
   ): Promise<Prisma.Prisma.MessageUncheckedCreateInput> {
+    const [, appName, phone] = channel.accountId.split(':');
+    const api = new GupshupClientApi(phone, appName, channel.token);
+
     const msg: any = {
       type: 'quick_reply',
     };
@@ -187,12 +206,7 @@ export class WhatsappApiChannel extends ApiChannel {
 
     return {
       chatId: chat.id,
-      externalId: await this.api(
-        chat.accountId,
-        channel.token,
-        channel.accountId,
-        msg,
-      ),
+      externalId: await api.sendMessage(chat.accountId, msg),
       fromMe: true,
       status: Prisma.MessageStatus.Accepted,
       content: {
@@ -347,32 +361,5 @@ export class WhatsappApiChannel extends ApiChannel {
       default:
         throw new BadRequestException();
     }
-  }
-
-  private async api(
-    destination: string,
-    source: string,
-    sourceName: string,
-    message: any,
-  ): Promise<string> {
-    const apikey = this.configService.get<string>('GS_SECRET');
-    const res = await axios.post<any>(
-      this.url,
-      qs.stringify({
-        channel: 'whatsapp',
-        source,
-        destination,
-        message: JSON.stringify(message),
-        'src.name': sourceName,
-      }),
-      {
-        headers: {
-          apikey,
-          'content-type': 'application/x-www-form-urlencoded',
-        },
-      },
-    );
-
-    return res.data.messageId;
   }
 }

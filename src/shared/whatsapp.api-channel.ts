@@ -44,8 +44,8 @@ export class WhatsappApiChannel extends ApiChannel {
 
       const url = this.configService.get<string>('MESSAGING_URL');
       await api.setWebhook(
-        token,
         app.id,
+        token,
         url.concat(`/channels/${channel.id}/webhook`),
       );
 

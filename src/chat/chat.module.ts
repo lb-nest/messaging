@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaService } from 'src/prisma.service';
+import { S3Service } from 'src/s3.service';
 import { ApiChannelRepository } from 'src/shared/api-channel.repository';
 import { WebhookSenderService } from 'src/shared/webhook-sender.service';
 import { ChatController } from './chat.controller';
@@ -14,6 +15,7 @@ import { MessageService } from './message.service';
     ChatService,
     MessageService,
     PrismaService,
+    S3Service,
     WebhookSenderService,
     ApiChannelRepository,
   ],

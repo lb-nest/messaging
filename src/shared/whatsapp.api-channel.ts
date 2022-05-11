@@ -289,13 +289,25 @@ export class WhatsappApiChannel extends ApiChannel {
   private async createContent(
     event: any,
   ): Promise<Omit<Prisma.Prisma.ContentCreateInput, 'message'>> {
+    if (event.payload.type) {
+      return {
+        text: event.payload.payload.text,
+      };
+    }
+
+    const res = await axios.get(event.payload.payload.url, {
+      responseType: 'stream',
+    });
+
+    const url = await this.s3Service.upload(res.data);
+
     switch (event.payload.type) {
       case 'audio':
         return {
           attachments: {
             create: {
               type: Prisma.AttachmentType.Audio,
-              url: event.payload.payload.url,
+              url,
             },
           },
         };
@@ -305,7 +317,7 @@ export class WhatsappApiChannel extends ApiChannel {
           attachments: {
             create: {
               type: Prisma.AttachmentType.Document,
-              url: event.payload.payload.url,
+              url,
             },
           },
         };
@@ -316,14 +328,9 @@ export class WhatsappApiChannel extends ApiChannel {
           attachments: {
             create: {
               type: Prisma.AttachmentType.Image,
-              url: event.payload.payload.url,
+              url,
             },
           },
-        };
-
-      case 'text':
-        return {
-          text: event.payload.payload.text,
         };
 
       case 'video':
@@ -332,7 +339,7 @@ export class WhatsappApiChannel extends ApiChannel {
           attachments: {
             create: {
               type: Prisma.AttachmentType.Video,
-              url: event.payload.payload.url,
+              url,
             },
           },
         };

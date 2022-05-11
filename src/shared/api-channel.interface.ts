@@ -5,12 +5,14 @@ import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
 import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
 import { PrismaService } from 'src/prisma.service';
+import { S3Service } from 'src/s3.service';
 import { WebhookSenderService } from './webhook-sender.service';
 
 export abstract class ApiChannel<T = unknown> {
   constructor(
     protected readonly prismaService: PrismaService,
     protected readonly configService: ConfigService,
+    protected readonly s3Service: S3Service,
   ) {}
 
   abstract create(

@@ -243,7 +243,7 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
 
     let avatarUrl: string;
     if (photo) {
-      avatarUrl = await bot.getFileLink(photo.file_id);
+      avatarUrl = await this.s3Service.upload(bot.getFileStream(photo.file_id));
     }
 
     const name = [user.first_name, user.last_name].filter(Boolean).join(' ');
@@ -259,7 +259,12 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
     message: TelegramBot.Message,
   ): Promise<Pick<Prisma.Attachment, 'type' | 'url' | 'name'>> {
     if (message.audio) {
-      const url = await bot.getFileLink(message.audio.file_id);
+      const url = await this.s3Service.upload(
+        bot.getFileStream(message.audio.file_id),
+        message.audio.title,
+        message.audio.mime_type,
+      );
+
       return {
         type: Prisma.AttachmentType.Audio,
         url,
@@ -268,7 +273,12 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
     }
 
     if (message.document) {
-      const url = await bot.getFileLink(message.document.file_id);
+      const url = await this.s3Service.upload(
+        bot.getFileStream(message.document.file_id),
+        message.document.file_name,
+        message.document.mime_type,
+      );
+
       return {
         type: Prisma.AttachmentType.Document,
         url,
@@ -278,8 +288,8 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
 
     if (message.photo) {
       const photo = message.photo.at(-1);
+      const url = await this.s3Service.upload(bot.getFileStream(photo.file_id));
 
-      const url = await bot.getFileLink(photo.file_id);
       return {
         type: Prisma.AttachmentType.Image,
         url,
@@ -288,7 +298,12 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
     }
 
     if (message.video) {
-      const url = await bot.getFileLink(message.video.file_id);
+      const url = await this.s3Service.upload(
+        bot.getFileStream(message.video.file_id),
+        undefined,
+        message.video.mime_type,
+      );
+
       return {
         type: Prisma.AttachmentType.Video,
         url,
@@ -297,7 +312,12 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
     }
 
     if (message.voice) {
-      const url = await bot.getFileLink(message.voice.file_id);
+      const url = await this.s3Service.upload(
+        bot.getFileStream(message.voice.file_id),
+        undefined,
+        message.voice.mime_type,
+      );
+
       return {
         type: Prisma.AttachmentType.Audio,
         url,

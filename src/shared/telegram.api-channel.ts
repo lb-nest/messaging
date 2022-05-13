@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import * as Prisma from '@prisma/client';
+import axios from 'axios';
 import { plainToClass } from 'class-transformer';
 import TelegramBot from 'node-telegram-bot-api';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';

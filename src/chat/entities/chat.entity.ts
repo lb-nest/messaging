@@ -14,7 +14,6 @@ export class Chat {
   @Exclude()
   accountId: string;
 
-  @Exclude()
   isNew: boolean;
 
   @Type(() => Message)

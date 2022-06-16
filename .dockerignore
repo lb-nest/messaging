@@ -1,5 +1,6 @@
-/dist
-/node_modules
+node_modules
+
+test
 
 .env
 .env.production
@@ -13,25 +14,23 @@ lerna-debug.log*
 
 .DS_Store
 
-/coverage
-/.nyc_output
+coverage
+.nyc_output
 
-/.idea
+.idea
 .project
 .classpath
-.c9/
+.c9
 *.launch
-.settings/
+.settings
 *.sublime-workspace
 
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.vscode
 
 .git
 .gitignore
 Dockerfile
 .dockerignore
 .prettierrc
+*.md
+docs

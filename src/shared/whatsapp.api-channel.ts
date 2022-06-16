@@ -1,15 +1,13 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, NotImplementedException } from '@nestjs/common';
 import * as Prisma from '@prisma/client';
-import { ChannelType, MessageStatus } from '@prisma/client';
+import { MessageStatus } from '@prisma/client';
 import axios from 'axios';
 import { plainToClass } from 'class-transformer';
-import { GupshupClientApi, GupshupPartnerApi } from 'gupshup-api';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
 import { Chat } from 'src/chat/entities/chat.entity';
 import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
-import { ButtonType } from 'src/hsm/enums/button-type.enum';
 import { ApiChannel } from './api-channel.interface';
 import { WebhookSenderService } from './webhook-sender.service';
 
@@ -18,41 +16,43 @@ export class WhatsappApiChannel extends ApiChannel {
     projectId: number,
     createChannelDto: CreateChannelDto,
   ): Promise<Channel> {
-    try {
-      const api = new GupshupPartnerApi(
-        this.configService.get<string>('GS_USER'),
-        this.configService.get<string>('GS_PASS'),
-      );
+    throw new NotImplementedException();
 
-      const app = await api.linkApp(
-        createChannelDto.accountId,
-        createChannelDto.token,
-      );
+    // try {
+    //   const api = new GupshupPartnerApi(
+    //     this.configService.get<string>('GS_USER'),
+    //     this.configService.get<string>('GS_PASS'),
+    //   );
 
-      const token = await api.createToken(app.id);
+    //   const app = await api.linkApp(
+    //     createChannelDto.accountId,
+    //     createChannelDto.token,
+    //   );
 
-      const channel = await this.prismaService.channel.create({
-        data: {
-          projectId,
-          name: createChannelDto.name,
-          type: ChannelType.Whatsapp,
-          accountId: `${app.id}:${app.name}:${app.phone}`,
-          token,
-          status: Prisma.ChannelStatus.Connected,
-        },
-      });
+    //   const token = await api.createToken(app.id);
 
-      const url = this.configService.get<string>('MESSAGING_URL');
-      await api.setWebhook(
-        app.id,
-        token,
-        url.concat(`/channels/${channel.id}/webhook`),
-      );
+    //   const channel = await this.prismaService.channel.create({
+    //     data: {
+    //       projectId,
+    //       name: createChannelDto.name,
+    //       type: ChannelType.Whatsapp,
+    //       accountId: `${app.id}:${app.name}:${app.phone}`,
+    //       token,
+    //       status: Prisma.ChannelStatus.Connected,
+    //     },
+    //   });
 
-      return channel;
-    } catch {
-      throw new BadRequestException();
-    }
+    //   const url = this.configService.get<string>('MESSAGING_URL');
+    //   await api.setWebhook(
+    //     app.id,
+    //     token,
+    //     url.concat(`/channels/${channel.id}/webhook`),
+    //   );
+
+    //   return channel;
+    // } catch {
+    //   throw new BadRequestException();
+    // }
   }
 
   async send(
@@ -60,108 +60,110 @@ export class WhatsappApiChannel extends ApiChannel {
     chat: Prisma.Chat,
     message: CreateMessageDto,
   ): Promise<MessageWithChatId[]> {
-    const messages: Prisma.Prisma.MessageUncheckedCreateInput[] = [];
+    throw new NotImplementedException();
 
-    if (message.buttons) {
-      messages.push(await this.sendHsm(channel, chat, message));
-    } else {
-      const [, appName, phone] = channel.accountId.split(':');
-      const api = new GupshupClientApi(phone, appName, channel.token);
+    // const messages: Prisma.Prisma.MessageUncheckedCreateInput[] = [];
 
-      if (message.text) {
-        messages.push({
-          chatId: chat.id,
-          externalId: await api.sendMessage(chat.accountId, {
-            type: 'text',
-            text: message.text,
-          }),
-          fromMe: true,
-          status: Prisma.MessageStatus.Accepted,
-          content: {
-            create: {
-              text: message.text,
-            },
-          },
-        });
-      }
+    // if (message.buttons) {
+    //   messages.push(await this.sendHsm(channel, chat, message));
+    // } else {
+    //   const [, appName, phone] = channel.accountId.split(':');
+    //   const api = new GupshupClientApi(phone, appName, channel.token);
 
-      await Promise.all(
-        message.attachments.map(async (attachment) => {
-          const msg: any = {};
-          switch (attachment.type) {
-            case Prisma.AttachmentType.Audio:
-              Object.assign(msg, {
-                type: 'audio',
-                url: attachment.url,
-              });
-              break;
+    //   if (message.text) {
+    //     messages.push({
+    //       chatId: chat.id,
+    //       externalId: await api.sendMessage(chat.accountId, {
+    //         type: 'text',
+    //         text: message.text,
+    //       }),
+    //       fromMe: true,
+    //       status: Prisma.MessageStatus.Accepted,
+    //       content: {
+    //         create: {
+    //           text: message.text,
+    //         },
+    //       },
+    //     });
+    //   }
 
-            case Prisma.AttachmentType.Document:
-              Object.assign(msg, {
-                type: 'file',
-                url: attachment.url,
-              });
-              break;
+    //   await Promise.all(
+    //     message.attachments.map(async (attachment) => {
+    //       const msg: any = {};
+    //       switch (attachment.type) {
+    //         case Prisma.AttachmentType.Audio:
+    //           Object.assign(msg, {
+    //             type: 'audio',
+    //             url: attachment.url,
+    //           });
+    //           break;
 
-            case Prisma.AttachmentType.Image:
-              Object.assign(msg, {
-                type: 'image',
-                previewUrl: attachment.url,
-                originalUrl: attachment.url,
-              });
-              break;
+    //         case Prisma.AttachmentType.Document:
+    //           Object.assign(msg, {
+    //             type: 'file',
+    //             url: attachment.url,
+    //           });
+    //           break;
 
-            case Prisma.AttachmentType.Video:
-              Object.assign(msg, {
-                type: 'video',
-                url: attachment.url,
-              });
-              break;
-          }
+    //         case Prisma.AttachmentType.Image:
+    //           Object.assign(msg, {
+    //             type: 'image',
+    //             previewUrl: attachment.url,
+    //             originalUrl: attachment.url,
+    //           });
+    //           break;
 
-          messages.push({
-            chatId: chat.id,
-            externalId: await api.sendMessage(chat.accountId, msg),
-            fromMe: true,
-            status: Prisma.MessageStatus.Accepted,
-            content: {
-              create: {
-                attachments: {
-                  create: attachment,
-                },
-              },
-            },
-          });
-        }),
-      );
-    }
+    //         case Prisma.AttachmentType.Video:
+    //           Object.assign(msg, {
+    //             type: 'video',
+    //             url: attachment.url,
+    //           });
+    //           break;
+    //       }
 
-    return Promise.all(
-      messages.map(async (message) =>
-        plainToClass(
-          MessageWithChatId,
-          this.prismaService.message.create({
-            data: message,
-            include: {
-              chat: {
-                select: {
-                  id: true,
-                },
-              },
-              content: {
-                orderBy: {
-                  id: 'desc',
-                },
-                take: 1,
-                include: {
-                  attachments: true,
-                },
-              },
-            },
-          }),
-        ),
-      ),
-    );
+    //       messages.push({
+    //         chatId: chat.id,
+    //         externalId: await api.sendMessage(chat.accountId, msg),
+    //         fromMe: true,
+    //         status: Prisma.MessageStatus.Accepted,
+    //         content: {
+    //           create: {
+    //             attachments: {
+    //               create: attachment,
+    //             },
+    //           },
+    //         },
+    //       });
+    //     }),
+    //   );
+    // }
+
+    // return Promise.all(
+    //   messages.map(async (message) =>
+    //     plainToClass(
+    //       MessageWithChatId,
+    //       this.prismaService.message.create({
+    //         data: message,
+    //         include: {
+    //           chat: {
+    //             select: {
+    //               id: true,
+    //             },
+    //           },
+    //           content: {
+    //             orderBy: {
+    //               id: 'desc',
+    //             },
+    //             take: 1,
+    //             include: {
+    //               attachments: true,
+    //             },
+    //           },
+    //         },
+    //       }),
+    //     ),
+    //   ),
+    // );
   }
 
   async handle(
@@ -193,41 +195,39 @@ export class WhatsappApiChannel extends ApiChannel {
     chat: Prisma.Chat,
     message: CreateMessageDto,
   ): Promise<Prisma.Prisma.MessageUncheckedCreateInput> {
-    const [, appName, phone] = channel.accountId.split(':');
-    const api = new GupshupClientApi(phone, appName, channel.token);
+    throw new NotImplementedException();
 
-    const msg: any = {
-      type: 'quick_reply',
-    };
-
-    if (message.text) {
-      msg.content = {
-        type: 'text',
-        text: message.text,
-      };
-    }
-
-    if (message.buttons) {
-      msg.options = message.buttons
-        .filter((button) => button.type === ButtonType.QuickReply)
-        .map((button) => ({
-          type: 'text',
-          title: button.text,
-        }));
-    }
-
-    return {
-      chatId: chat.id,
-      externalId: await api.sendMessage(chat.accountId, msg),
-      fromMe: true,
-      status: Prisma.MessageStatus.Accepted,
-      content: {
-        create: {
-          text: message.text,
-          buttons: message.buttons,
-        },
-      },
-    };
+    // const [, appName, phone] = channel.accountId.split(':');
+    // const api = new GupshupClientApi(phone, appName, channel.token);
+    // const msg: any = {
+    //   type: 'quick_reply',
+    // };
+    // if (message.text) {
+    //   msg.content = {
+    //     type: 'text',
+    //     text: message.text,
+    //   };
+    // }
+    // if (message.buttons) {
+    //   msg.options = message.buttons
+    //     .filter((button) => button.type === ButtonType.QuickReply)
+    //     .map((button) => ({
+    //       type: 'text',
+    //       title: button.text,
+    //     }));
+    // }
+    // return {
+    //   chatId: chat.id,
+    //   externalId: await api.sendMessage(chat.accountId, msg),
+    //   fromMe: true,
+    //   status: Prisma.MessageStatus.Accepted,
+    //   content: {
+    //     create: {
+    //       text: message.text,
+    //       buttons: message.buttons,
+    //     },
+    //   },
+    // };
   }
 
   private async handleMessage(
@@ -352,7 +352,6 @@ export class WhatsappApiChannel extends ApiChannel {
         return;
     }
 
-    // TODO: notify message status changed
     await this.prismaService.message.update({
       where: {
         id: message.id,
@@ -360,37 +359,23 @@ export class WhatsappApiChannel extends ApiChannel {
       data: {
         status,
       },
-      // include: {
-      //   chat: {
-      //     select: {
-      //       id: true,
-      //     },
-      //   },
-      //   content: {
-      //     orderBy: {
-      //       id: 'desc',
-      //     },
-      //     take: 1,
-      //     include: {
-      //       attachments: true,
-      //     },
-      //   },
-      // },
     });
+
+    // TODO: notify message status changed
   }
 
   private async handleUserEvent(
     channel: Prisma.Channel,
     event: any,
   ): Promise<void> {
-    // TODO
+    // TODO: handleUserEvent
   }
 
   private async handleSystemEvent(
     channel: Prisma.Channel,
     event: any,
   ): Promise<void> {
-    // TODO
+    // TODO: handleSystemEvent
   }
 
   private async createContent(

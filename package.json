@@ -34,7 +34,6 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.13.2",
     "content-disposition": "^0.5.4",
-    "gupshup-api": "../gupshup-api",
     "node-telegram-bot-api": "^0.56.0",
     "passport": "^0.5.2",
     "passport-jwt": "^4.0.0",

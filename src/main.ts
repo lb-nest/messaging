@@ -22,6 +22,6 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   app.setGlobalPrefix('api');
 
-  await app.listen(configService.get<number>('PORT'));
+  await app.listen(configService.get<number>('PORT'), '0.0.0.0');
 }
 bootstrap();

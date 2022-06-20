@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
   UseInterceptors,
@@ -102,13 +103,13 @@ export class ChatController {
   }
 
   @UseGuards(JwtAuthGuard)
-  @Post(':id/messages/read')
-  readMessages(
+  @Put(':id/messages/read')
+  markMessagesAsRead(
     @Auth() user: TokenPayload,
     @Param('id') id: string,
     @Body() readMessagesDto: ReadMessagesDto,
   ) {
-    return this.messageService.readMessages(
+    return this.messageService.markAsRead(
       user.project.id,
       Number(id),
       readMessagesDto,

@@ -65,6 +65,23 @@ export abstract class ApiChannel<T = unknown> {
         },
         include: {
           contact: true,
+          messages: {
+            orderBy: {
+              id: 'desc',
+            },
+            take: 1,
+            include: {
+              content: {
+                orderBy: {
+                  id: 'desc',
+                },
+                take: 1,
+                include: {
+                  attachments: true,
+                },
+              },
+            },
+          },
         },
       }),
     );
@@ -75,6 +92,7 @@ export abstract class ApiChannel<T = unknown> {
     status: Prisma.MessageStatus,
     content: Prisma.Prisma.ContentCreateNestedManyWithoutMessageInput,
     externalId: string,
+    fromMe = false,
   ): Promise<MessageWithChatId> {
     return plainToClass(
       MessageWithChatId,
@@ -91,7 +109,7 @@ export abstract class ApiChannel<T = unknown> {
               id: chatId,
             },
           },
-          fromMe: false,
+          fromMe,
           status,
           content,
           externalId,

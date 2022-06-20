@@ -1,6 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
 import * as Prisma from '@prisma/client';
-import { plainToClass } from 'class-transformer';
 import TelegramBot from 'node-telegram-bot-api';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
@@ -10,6 +9,13 @@ import { ApiChannel } from './api-channel.interface';
 import { WebhookSenderService } from './webhook-sender.service';
 
 export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
+  private readonly SEND_METHODS = {
+    [Prisma.AttachmentType.Audio]: 'sendAudio',
+    [Prisma.AttachmentType.Document]: 'sendDocument',
+    [Prisma.AttachmentType.Image]: 'sendPhoto',
+    [Prisma.AttachmentType.Video]: 'sendVideo',
+  };
+
   async create(
     projectId: number,
     createChannelDto: CreateChannelDto,
@@ -26,8 +32,11 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
         },
       });
 
-      const url = this.configService.get<string>('MESSAGING_URL');
-      await bot.setWebHook(url.concat(`/channels/${channel.id}/webhook`));
+      await bot.setWebHook(
+        this.configService
+          .get<string>('MESSAGING_URL')
+          .concat(`/channels/${channel.id}/webhook`),
+      );
 
       return channel;
     } catch {
@@ -46,75 +55,50 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
     if (message.text) {
       messages.push(
         await bot.sendMessage(chat.accountId, message.text, {
-          reply_markup: undefined,
+          reply_markup: {
+            one_time_keyboard: true,
+            force_reply: true,
+            resize_keyboard: true,
+            keyboard: message.buttons?.map((button) => [
+              {
+                text: button.text,
+              },
+            ]),
+          },
         }),
       );
     }
 
-    await Promise.all(
-      message.attachments.map(async (attachment) => {
-        switch (attachment.type) {
-          case Prisma.AttachmentType.Audio:
-            messages.push(await bot.sendAudio(chat.accountId, attachment.url));
-            break;
-
-          case Prisma.AttachmentType.Document:
-          case Prisma.AttachmentType.Video:
-            messages.push(
-              await bot.sendDocument(chat.accountId, attachment.url, {
-                caption: attachment.name,
-              }),
-            );
-            break;
-
-          case Prisma.AttachmentType.Image:
-            messages.push(
-              await bot.sendPhoto(chat.accountId, attachment.url, {
-                caption: attachment.name,
-              }),
-            );
-            break;
-        }
-      }),
+    messages.push(
+      ...(await Promise.all(
+        message.attachments.map((attachment) =>
+          bot[this.SEND_METHODS[attachment.type]](
+            chat.accountId,
+            attachment.url,
+            {
+              caption: attachment.name,
+            },
+          ),
+        ),
+      )),
     );
 
     return Promise.all(
       messages.map(async (message) =>
-        plainToClass(
-          MessageWithChatId,
-          await this.prismaService.message.create({
-            data: {
-              chatId: chat.id,
-              externalId: String(message.message_id),
-              fromMe: true,
-              status: Prisma.MessageStatus.Delivered,
-              content: {
-                create: {
-                  text: message.text ?? message.caption,
-                  attachments: {
-                    create: await this.createAttachment(bot, message),
-                  },
-                  buttons: undefined,
-                },
+        this.createMessage(
+          chat.id,
+          Prisma.MessageStatus.Delivered,
+          {
+            create: {
+              text: message.text,
+              attachments: {
+                create: await this.createAttachment(bot, message),
               },
+              buttons: undefined,
             },
-            include: {
-              chat: {
-                select: {
-                  id: true,
-                },
-              },
-              content: {
-                orderBy: {
-                  id: 'desc',
-                },
-                take: 1,
-                include: {
-                  attachments: true,
-                },
-              },
-            },
-          }),
+          },
+          message.message_id.toString(),
+          true,
         ),
       ),
     );
@@ -130,12 +114,15 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
       return;
     }
 
-    const accountId = String(telegramMessage.chat.id);
     const bot = new TelegramBot(channel.token);
 
-    const chat = await this.createChat(channel.id, accountId, {
-      create: await this.createContact(bot, telegramMessage.from), // TODO: telegramMessage.chat???
-    });
+    const chat = await this.createChat(
+      channel.id,
+      String(telegramMessage.chat.id),
+      {
+        create: await this.createContact(bot, telegramMessage.chat.id),
+      },
+    );
 
     const message = await this.createMessage(
       chat.id,
@@ -149,7 +136,7 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
           buttons: undefined,
         },
       },
-      String(telegramMessage.message_id),
+      String(telegramMessage.message_id.toString()),
     );
 
     await webhookSenderService.dispatchAsync(channel.projectId, {
@@ -170,19 +157,20 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
 
   private async createContact(
     bot: TelegramBot,
-    user: TelegramBot.User,
+    chatId: TelegramBot.ChatId,
   ): Promise<Omit<Prisma.Contact, 'chatId'>> {
-    const userProfile = await bot.getUserProfilePhotos(user.id);
-    const photo = userProfile.photos[0]?.at(-1);
+    const chat = await bot.getChat(chatId);
 
     let avatarUrl: string;
-    if (photo) {
-      avatarUrl = await this.s3Service.upload(bot.getFileStream(photo.file_id));
+    if (chat.photo) {
+      avatarUrl = await this.s3Service.upload(
+        bot.getFileStream(chat.photo.big_file_id),
+      );
     }
 
-    const name = [user.first_name, user.last_name].filter(Boolean).join(' ');
+    const name = [chat.first_name, chat.last_name].filter(Boolean).join(' ');
     return {
-      username: user.username,
+      username: chat.username,
       name,
       avatarUrl,
     };
@@ -191,70 +179,61 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
   private async createAttachment(
     bot: TelegramBot,
     message: TelegramBot.Message,
-  ): Promise<Pick<Prisma.Attachment, 'type' | 'url' | 'name'>> {
+  ): Promise<Prisma.Prisma.AttachmentCreateWithoutContentInput> {
     if (message.audio) {
-      const url = await this.s3Service.upload(
-        bot.getFileStream(message.audio.file_id),
-        message.audio.title,
-        message.audio.mime_type,
-      );
-
       return {
         type: Prisma.AttachmentType.Audio,
-        url,
+        url: await this.s3Service.upload(
+          bot.getFileStream(message.audio.file_id),
+          message.audio.title,
+          message.audio.mime_type,
+        ),
         name: message.audio.title,
       };
     }
 
     if (message.document) {
-      const url = await this.s3Service.upload(
-        bot.getFileStream(message.document.file_id),
-        message.document.file_name,
-        message.document.mime_type,
-      );
-
       return {
         type: Prisma.AttachmentType.Document,
-        url,
+        url: await this.s3Service.upload(
+          bot.getFileStream(message.document.file_id),
+          message.document.file_name,
+          message.document.mime_type,
+        ),
         name: message.document.file_name,
       };
     }
 
     if (message.photo) {
-      const photo = message.photo.at(-1);
-      const url = await this.s3Service.upload(bot.getFileStream(photo.file_id));
-
       return {
         type: Prisma.AttachmentType.Image,
-        url,
+        url: await this.s3Service.upload(
+          bot.getFileStream(message.photo.at(-1).file_id),
+        ),
         name: null,
       };
     }
 
     if (message.video) {
-      const url = await this.s3Service.upload(
-        bot.getFileStream(message.video.file_id),
-        undefined,
-        message.video.mime_type,
-      );
-
       return {
         type: Prisma.AttachmentType.Video,
-        url,
+        url: await this.s3Service.upload(
+          bot.getFileStream(message.video.file_id),
+          undefined,
+          message.video.mime_type,
+        ),
         name: null,
       };
     }
 
     if (message.voice) {
-      const url = await this.s3Service.upload(
-        bot.getFileStream(message.voice.file_id),
-        undefined,
-        message.voice.mime_type,
-      );
-
       return {
         type: Prisma.AttachmentType.Audio,
-        url,
+        url: await this.s3Service.upload(
+          bot.getFileStream(message.voice.file_id),
+          undefined,
+          message.voice.mime_type,
+        ),
         name: null,
       };
     }

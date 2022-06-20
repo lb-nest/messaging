@@ -4,7 +4,9 @@ import { ChannelType } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { S3Service } from 'src/s3.service';
 import { ApiChannel } from './api-channel.interface';
+import { InstagramApiChannel } from './instagram.api-channel';
 import { TelegramApiChannel } from './telegram.api-channel';
+import { VkontakteApiChannel } from './vkontakte.api-channel';
 import { WebchatApiChannel } from './webchat.api-channel';
 import { WhatsappApiChannel } from './whatsapp.api-channel';
 
@@ -16,7 +18,9 @@ export class ApiChannelRepository {
     private readonly s3Service: S3Service,
   ) {}
 
+  private [ChannelType.Instagram] = InstagramApiChannel;
   private [ChannelType.Telegram] = TelegramApiChannel;
+  private [ChannelType.Vkontakte] = VkontakteApiChannel;
   private [ChannelType.Webchat] = WebchatApiChannel;
   private [ChannelType.Whatsapp] = WhatsappApiChannel;
 

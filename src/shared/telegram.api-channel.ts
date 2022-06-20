@@ -1,12 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
 import * as Prisma from '@prisma/client';
-import axios from 'axios';
 import { plainToClass } from 'class-transformer';
 import TelegramBot from 'node-telegram-bot-api';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
-import { Chat } from 'src/chat/entities/chat.entity';
 import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
 import { ApiChannel } from './api-channel.interface';
 import { WebhookSenderService } from './webhook-sender.service';
@@ -135,88 +133,23 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
     const accountId = String(telegramMessage.chat.id);
     const bot = new TelegramBot(channel.token);
 
-    const chat = plainToClass(
-      Chat,
-      await this.prismaService.chat.upsert({
-        where: {
-          channelId_accountId: {
-            channelId: channel.id,
-            accountId,
-          },
-        },
-        create: {
-          accountId,
-          contact: {
-            create: await this.createContact(bot, telegramMessage.from),
-          },
-          channel: {
-            connect: {
-              id: channel.id,
-            },
-          },
-        },
-        update: {
-          isNew: false,
-        },
-        include: {
-          contact: true,
-        },
-      }),
-    );
+    const chat = await this.createChat(channel.id, accountId, {
+      create: await this.createContact(bot, telegramMessage.from), // TODO: telegramMessage.chat???
+    });
 
-    const message = plainToClass(
-      MessageWithChatId,
-      await this.prismaService.message.upsert({
-        where: {
-          chatId_externalId: {
-            chatId: chat.id,
-            externalId: String(telegramMessage.message_id),
-          },
-        },
+    const message = await this.createMessage(
+      chat.id,
+      Prisma.MessageStatus.Delivered,
+      {
         create: {
-          chatId: chat.id,
-          fromMe: false,
-          status: Prisma.MessageStatus.Delivered,
-          content: {
-            create: {
-              text: telegramMessage.text ?? telegramMessage.caption,
-              attachments: {
-                create: await this.createAttachment(bot, telegramMessage),
-              },
-              buttons: undefined,
-            },
+          text: telegramMessage.text ?? telegramMessage.caption,
+          attachments: {
+            create: await this.createAttachment(bot, telegramMessage),
           },
-          externalId: String(telegramMessage.message_id),
+          buttons: undefined,
         },
-        update: {
-          content: {
-            create: {
-              text: telegramMessage.text ?? telegramMessage.caption,
-              attachments: {
-                create: await this.createAttachment(bot, telegramMessage),
-              },
-              buttons: undefined,
-            },
-          },
-          updatedAt: new Date(),
-        },
-        include: {
-          chat: {
-            select: {
-              id: true,
-            },
-          },
-          content: {
-            orderBy: {
-              id: 'desc',
-            },
-            take: 1,
-            include: {
-              attachments: true,
-            },
-          },
-        },
-      }),
+      },
+      String(telegramMessage.message_id),
     );
 
     await webhookSenderService.dispatchAsync(channel.projectId, {

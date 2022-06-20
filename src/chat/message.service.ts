@@ -1,9 +1,10 @@
 import { Injectable, NotImplementedException } from '@nestjs/common';
-import { WebhookEventType } from '@prisma/client';
+import { MessageStatus, WebhookEventType } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { ApiChannelRepository } from 'src/shared/api-channel.repository';
 import { WebhookSenderService } from 'src/shared/webhook-sender.service';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { ReadMessagesDto } from './dto/read-messages.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
 import { MessageWithChatId } from './entities/message-with-chat-id.entity';
 
@@ -109,5 +110,41 @@ export class MessageService {
 
   async delete(projectId: number, id: number): Promise<MessageWithChatId> {
     throw new NotImplementedException();
+  }
+
+  async readMessages(
+    projectId: number,
+    id: number,
+    readMessagesDto: ReadMessagesDto,
+  ): Promise<void> {
+    const messages = await this.prismaService.message.updateMany({
+      where: {
+        chat: {
+          channel: {
+            projectId,
+          },
+        },
+        id: {
+          in: readMessagesDto.ids,
+        },
+        fromMe: false,
+      },
+      data: {
+        status: MessageStatus.Read,
+      },
+    });
+
+    if (messages.count) {
+      await this.prismaService.chat.update({
+        where: {
+          id,
+        },
+        data: {
+          unreadCount: {
+            decrement: messages.count,
+          },
+        },
+      });
+    }
   }
 }

@@ -1,12 +1,9 @@
-import { BadRequestException, NotImplementedException } from '@nestjs/common';
+import { NotImplementedException } from '@nestjs/common';
 import * as Prisma from '@prisma/client';
-import { MessageStatus } from '@prisma/client';
 import axios from 'axios';
-import { plainToClass } from 'class-transformer';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
-import { Chat } from 'src/chat/entities/chat.entity';
 import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
 import { ApiChannel } from './api-channel.interface';
 import { WebhookSenderService } from './webhook-sender.service';
@@ -235,67 +232,20 @@ export class WhatsappApiChannel extends ApiChannel {
     event: any,
     webhookSenderService: WebhookSenderService,
   ) {
-    const chat = plainToClass(
-      Chat,
-      await this.prismaService.chat.upsert({
-        where: {
-          channelId_accountId: {
-            channelId: channel.id,
-            accountId: event.payload.source,
-          },
-        },
-        create: {
-          accountId: event.payload.source,
-          contact: {
-            create: {
-              name: event.payload.sender.name,
-              username: event.payload.source,
-            },
-          },
-          channel: {
-            connect: {
-              id: channel.id,
-            },
-          },
-        },
-        update: {
-          isNew: false,
-        },
-        include: {
-          contact: true,
-        },
-      }),
-    );
+    const chat = await this.createChat(channel.id, event.payload.source, {
+      create: {
+        name: event.payload.sender.name,
+        username: event.payload.source,
+      },
+    });
 
-    const message = plainToClass(
-      MessageWithChatId,
-      await this.prismaService.message.create({
-        data: {
-          chatId: chat.id,
-          fromMe: false,
-          status: Prisma.MessageStatus.Delivered,
-          content: {
-            create: await this.createContent(event),
-          },
-          externalId: event.payload.id,
-        },
-        include: {
-          chat: {
-            select: {
-              id: true,
-            },
-          },
-          content: {
-            orderBy: {
-              id: 'desc',
-            },
-            take: 1,
-            include: {
-              attachments: true,
-            },
-          },
-        },
-      }),
+    const message = await this.createMessage(
+      chat.id,
+      Prisma.MessageStatus.Accepted,
+      {
+        create: await this.createContent(event),
+      },
+      event.payload.id,
     );
 
     await webhookSenderService.dispatchAsync(channel.projectId, {
@@ -327,7 +277,7 @@ export class WhatsappApiChannel extends ApiChannel {
       return;
     }
 
-    let status: MessageStatus;
+    let status: Prisma.MessageStatus;
     switch (event.payload.type) {
       case 'enqueued':
         await this.prismaService.message.update({
@@ -341,11 +291,11 @@ export class WhatsappApiChannel extends ApiChannel {
         return;
 
       case 'delivered':
-        status = MessageStatus.Delivered;
+        status = Prisma.MessageStatus.Delivered;
         break;
 
       case 'failed':
-        status = MessageStatus.Error;
+        status = Prisma.MessageStatus.Error;
         break;
 
       default:
@@ -392,52 +342,41 @@ export class WhatsappApiChannel extends ApiChannel {
     });
 
     const url = await this.s3Service.upload(res.data);
-
-    switch (event.payload.type) {
-      case 'audio':
-        return {
-          attachments: {
-            create: {
-              type: Prisma.AttachmentType.Audio,
-              url,
-            },
+    return {
+      audio: {
+        attachments: {
+          create: {
+            type: Prisma.AttachmentType.Audio,
+            url,
           },
-        };
-
-      case 'file':
-        return {
-          attachments: {
-            create: {
-              type: Prisma.AttachmentType.Document,
-              url,
-            },
+        },
+      },
+      file: {
+        attachments: {
+          create: {
+            type: Prisma.AttachmentType.Document,
+            url,
           },
-        };
-
-      case 'image':
-        return {
-          text: event.payload.payload.caption,
-          attachments: {
-            create: {
-              type: Prisma.AttachmentType.Image,
-              url,
-            },
+        },
+      },
+      image: {
+        text: event.payload.payload.caption,
+        attachments: {
+          create: {
+            type: Prisma.AttachmentType.Image,
+            url,
           },
-        };
-
-      case 'video':
-        return {
-          text: event.payload.payload.caption,
-          attachments: {
-            create: {
-              type: Prisma.AttachmentType.Video,
-              url,
-            },
+        },
+      },
+      video: {
+        text: event.payload.payload.caption,
+        attachments: {
+          create: {
+            type: Prisma.AttachmentType.Video,
+            url,
           },
-        };
-
-      default:
-        throw new BadRequestException();
-    }
+        },
+      },
+    }[event.payload.type];
   }
 }

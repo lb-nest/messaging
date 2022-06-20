@@ -16,6 +16,8 @@ export class Chat {
 
   isNew: boolean;
 
+  unreadCount: number;
+
   @Type(() => Message)
   messages: Message[];
 }

@@ -18,6 +18,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { ReadMessagesDto } from './dto/read-messages.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
 import { Chat } from './entities/chat.entity';
@@ -98,6 +99,20 @@ export class ChatController {
   @Get(':id/messages')
   findAllMessages(@Auth() user: TokenPayload, @Param('id') id: string) {
     return this.messageService.findAll(user.project.id, Number(id));
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/messages/read')
+  readMessages(
+    @Auth() user: TokenPayload,
+    @Param('id') id: string,
+    @Body() readMessagesDto: ReadMessagesDto,
+  ) {
+    return this.messageService.readMessages(
+      user.project.id,
+      Number(id),
+      readMessagesDto,
+    );
   }
 
   @UseGuards(JwtAuthGuard)

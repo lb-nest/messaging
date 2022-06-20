@@ -11,7 +11,9 @@ datasource db {
 }
 
 enum ChannelType {
+  Instagram
   Telegram
+  Vkontakte
   Webchat
   Whatsapp
 }
@@ -45,15 +47,16 @@ model Contact {
 }
 
 model Chat {
-  id        Int       @id @default(autoincrement())
-  channelId Int
-  channel   Channel   @relation(fields: [channelId], references: [id])
-  contact   Contact?
-  accountId String
-  isNew     Boolean   @default(true)
-  messages  Message[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          Int       @id @default(autoincrement())
+  channelId   Int
+  channel     Channel   @relation(fields: [channelId], references: [id])
+  contact     Contact?
+  accountId   String
+  isNew       Boolean   @default(true)
+  unreadCount Int       @default(0)
+  messages    Message[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@unique([channelId, accountId])
 }

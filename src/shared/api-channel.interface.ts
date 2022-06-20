@@ -1,8 +1,10 @@
 import { ConfigService } from '@nestjs/config';
-import Prisma from '@prisma/client';
+import * as Prisma from '@prisma/client';
+import { plainToClass } from 'class-transformer';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
+import { Chat } from 'src/chat/entities/chat.entity';
 import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
 import { PrismaService } from 'src/prisma.service';
 import { S3Service } from 'src/s3.service';
@@ -31,4 +33,90 @@ export abstract class ApiChannel<T = unknown> {
     event: T,
     webhookSenderService: WebhookSenderService,
   ): Promise<unknown>;
+
+  protected async createChat(
+    channelId: number,
+    accountId: string,
+    contact: Prisma.Prisma.ContactCreateNestedOneWithoutChatInput,
+  ): Promise<Chat> {
+    return plainToClass(
+      Chat,
+      await this.prismaService.chat.upsert({
+        where: {
+          channelId_accountId: {
+            channelId,
+            accountId,
+          },
+        },
+        create: {
+          accountId,
+          channel: {
+            connect: {
+              id: channelId,
+            },
+          },
+          contact,
+        },
+        update: {
+          isNew: false,
+          unreadCount: {
+            increment: 1,
+          },
+        },
+        include: {
+          contact: true,
+        },
+      }),
+    );
+  }
+
+  protected async createMessage(
+    chatId: number,
+    status: Prisma.MessageStatus,
+    content: Prisma.Prisma.ContentCreateNestedManyWithoutMessageInput,
+    externalId: string,
+  ): Promise<MessageWithChatId> {
+    return plainToClass(
+      MessageWithChatId,
+      await this.prismaService.message.upsert({
+        where: {
+          chatId_externalId: {
+            chatId,
+            externalId,
+          },
+        },
+        create: {
+          chat: {
+            connect: {
+              id: chatId,
+            },
+          },
+          fromMe: false,
+          status,
+          content,
+          externalId,
+        },
+        update: {
+          content,
+          updatedAt: new Date(),
+        },
+        include: {
+          chat: {
+            select: {
+              id: true,
+            },
+          },
+          content: {
+            orderBy: {
+              id: 'desc',
+            },
+            take: 1,
+            include: {
+              attachments: true,
+            },
+          },
+        },
+      }),
+    );
+  }
 }

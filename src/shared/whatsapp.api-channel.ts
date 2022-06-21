@@ -1,5 +1,6 @@
 import { NotImplementedException } from '@nestjs/common';
 import * as Prisma from '@prisma/client';
+import { ApprovalStatus } from '@prisma/client';
 import axios from 'axios';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
@@ -17,8 +18,8 @@ export class WhatsappApiChannel extends ApiChannel {
 
     // try {
     //   const api = new GupshupPartnerApi(
-    //     this.configService.get<string>('GS_USER'),
-    //     this.configService.get<string>('GS_PASS'),
+    //     this.configService.get<string>('GS_USR'),
+    //     this.configService.get<string>('GS_PWD'),
     //   );
 
     //   const app = await api.linkApp(
@@ -169,20 +170,28 @@ export class WhatsappApiChannel extends ApiChannel {
     webhookSenderService: WebhookSenderService,
   ): Promise<void> {
     switch (event.type) {
-      case 'message':
-        await this.handleMessage(channel, event, webhookSenderService);
+      case 'user-event':
+        await this.handleUserEvent(channel, event);
         break;
 
       case 'message-event':
         await this.handleMessageEvent(channel, event, webhookSenderService);
         break;
 
-      case 'user-event':
-        await this.handleUserEvent(channel, event);
+      case 'template-event':
+        await this.handleTemplateEvent(channel, event);
         break;
 
-      case 'system-event':
-        await this.handleSystemEvent(channel, event);
+      case 'account-event':
+        await this.handleAccountEvent(channel, event);
+        break;
+
+      case 'message':
+        await this.handleMessage(channel, event, webhookSenderService);
+        break;
+
+      case 'billing-event':
+        await this.handleBillingEvent(channel, event);
         break;
     }
   }
@@ -227,39 +236,11 @@ export class WhatsappApiChannel extends ApiChannel {
     // };
   }
 
-  private async handleMessage(
+  private async handleUserEvent(
     channel: Prisma.Channel,
     event: any,
-    webhookSenderService: WebhookSenderService,
-  ) {
-    const chat = await this.createChat(channel.id, event.payload.source, {
-      create: {
-        name: event.payload.sender.name,
-        username: event.payload.source,
-      },
-    });
-
-    const message = await this.createMessage(
-      chat.id,
-      Prisma.MessageStatus.Accepted,
-      {
-        create: await this.createContent(event),
-      },
-      event.payload.id,
-    );
-
-    await webhookSenderService.dispatchAsync(channel.projectId, {
-      type: Prisma.WebhookEventType.IncomingChats,
-      payload: {
-        ...chat,
-        messages: [message],
-      },
-    });
-
-    await webhookSenderService.dispatchAsync(channel.projectId, {
-      type: Prisma.WebhookEventType.IncomingMessages,
-      payload: [message],
-    });
+  ): Promise<void> {
+    // TODO: handleUserEvent
   }
 
   private async handleMessageEvent(
@@ -314,18 +295,97 @@ export class WhatsappApiChannel extends ApiChannel {
     // TODO: notify message status changed
   }
 
-  private async handleUserEvent(
+  private async handleTemplateEvent(
     channel: Prisma.Channel,
     event: any,
   ): Promise<void> {
-    // TODO: handleUserEvent
+    const templateMessage = await this.prismaService.templateMessage.findUnique(
+      {
+        where: {
+          projectId_code: {
+            projectId: channel.projectId,
+            code: event.payload.elementName,
+          },
+        },
+      },
+    );
+
+    if (!templateMessage) {
+      return;
+    }
+
+    const status = {
+      REJECTED: ApprovalStatus.Rejected,
+      APPROVED: ApprovalStatus.Approved,
+      DELETED: undefined,
+      DISABLED: undefined,
+    }[event.payload.status];
+
+    if (!status) {
+      return;
+    }
+
+    await this.prismaService.approval.update({
+      where: {
+        channelId_templateId: {
+          channelId: channel.id,
+          templateId: templateMessage.id,
+        },
+      },
+      data: {
+        status,
+        rejectedReason: event.payload.rejectedReason,
+      },
+    });
   }
 
-  private async handleSystemEvent(
+  private async handleAccountEvent(
     channel: Prisma.Channel,
     event: any,
   ): Promise<void> {
-    // TODO: handleSystemEvent
+    // TODO: handleAccountEvent
+  }
+
+  private async handleMessage(
+    channel: Prisma.Channel,
+    event: any,
+    webhookSenderService: WebhookSenderService,
+  ) {
+    const chat = await this.createChat(channel.id, event.payload.source, {
+      create: {
+        name: event.payload.sender.name,
+        username: event.payload.source,
+      },
+    });
+
+    const message = await this.createMessage(
+      chat.id,
+      Prisma.MessageStatus.Accepted,
+      {
+        create: await this.createContent(event),
+      },
+      event.payload.id,
+    );
+
+    await webhookSenderService.dispatchAsync(channel.projectId, {
+      type: Prisma.WebhookEventType.IncomingChats,
+      payload: {
+        ...chat,
+        messages: [message],
+      },
+    });
+
+    await webhookSenderService.dispatchAsync(channel.projectId, {
+      type: Prisma.WebhookEventType.IncomingMessages,
+      payload: [message],
+    });
+  }
+
+  private async handleBillingEvent(
+    channel: Prisma.Channel,
+    event: any,
+  ): Promise<void> {
+    // TODO: handleBillingEvent
   }
 
   private async createContent(

@@ -13,4 +13,6 @@ export class Approval {
   templateId: number;
 
   status: ApprovalStatus;
+
+  rejectedReason?: string;
 }

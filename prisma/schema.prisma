@@ -128,11 +128,12 @@ enum ApprovalStatus {
 }
 
 model Approval {
-  channelId  Int
-  channel    Channel         @relation(fields: [channelId], references: [id])
-  templateId Int
-  template   TemplateMessage @relation(fields: [templateId], references: [id])
-  status     ApprovalStatus
+  channelId      Int
+  channel        Channel         @relation(fields: [channelId], references: [id])
+  templateId     Int
+  template       TemplateMessage @relation(fields: [templateId], references: [id])
+  status         ApprovalStatus
+  rejectedReason String?
 
   @@id([channelId, templateId])
 }

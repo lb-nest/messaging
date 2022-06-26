@@ -1,26 +1,11 @@
-import { AttachmentType } from '@prisma/client';
 import { Transform, TransformFnParams, Type } from 'class-transformer';
 import {
   IsArray,
-  IsEnum,
   IsNotEmpty,
   IsOptional,
-  IsString,
-  IsUrl,
   ValidateNested,
 } from 'class-validator';
-
-class Attachment {
-  @IsEnum(AttachmentType)
-  type: AttachmentType;
-
-  @IsUrl()
-  url: string;
-
-  @IsOptional()
-  @IsString()
-  name?: string;
-}
+import { Attachment } from './create-attachment.dto';
 
 export class CreateMessageDto {
   @IsOptional()

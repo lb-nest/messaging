@@ -1,15 +1,20 @@
-import { Transform, TransformFnParams } from 'class-transformer';
-import { IsInt, IsNotEmpty } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsUrl } from 'class-validator';
 
 export class CreateChatDto {
   @IsInt()
   channelId: number;
 
-  @IsNotEmpty()
-  @Transform(({ value }: TransformFnParams) => value.trim())
+  @IsString()
+  accountId: string;
+
+  @IsString()
   username: string;
 
-  @IsNotEmpty()
-  @Transform(({ value }: TransformFnParams) => value.trim())
+  @IsString()
   name: string;
+
+  @IsString()
+  @IsOptional()
+  @IsUrl()
+  avatarUrl?: string;
 }

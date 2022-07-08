@@ -17,5 +17,6 @@ import { ChannelService } from './channel.service';
     ApiChannelRepository,
     WebhookSenderService,
   ],
+  exports: [ChannelService],
 })
 export class ChannelModule {}

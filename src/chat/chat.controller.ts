@@ -19,6 +19,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
+import { ImportChatsDto } from './dto/import-chats.dto';
 import { ReadMessagesDto } from './dto/read-messages.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -78,6 +79,16 @@ export class ChatController {
   @Delete(':id')
   delete(@Auth() user: TokenPayload, @Param('id') id: string) {
     return this.chatService.delete(user.project.id, Number(id));
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(new TransformInterceptor(Chat))
+  @Post('/import')
+  import(
+    @Auth() user: TokenPayload,
+    @Body() importChatsDto: ImportChatsDto,
+  ): Promise<Chat[]> {
+    return this.chatService.import(user.project.id, importChatsDto);
   }
 
   @UseGuards(JwtAuthGuard)

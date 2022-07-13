@@ -13,15 +13,15 @@ import { WebhookModule } from './webhook/webhook.module';
     ConfigModule.forRoot({
       validationSchema: Joi.object({
         DATABASE_URL: Joi.string().uri().required(),
+        BROKER_URL: Joi.string().uri().required(),
         PORT: Joi.number().default(8080),
         SECRET: Joi.string().required(),
         S3_ENDPOINT: Joi.string().uri().required(),
         S3_ACCESS_KEY: Joi.string().required(),
         S3_SECRET_KEY: Joi.string().required(),
         S3_BUCKET: Joi.string().required(),
-        GS_USR: Joi.string().required(),
-        GS_PWD: Joi.string().required(),
-        AUTHORIZATION_URL: Joi.string().uri().required(),
+        GS_USER: Joi.string().required(),
+        GS_PASS: Joi.string().required(),
         MESSAGING_URL: Joi.string().uri().required(),
         WEBSOCKET_EDGE_URL: Joi.string().uri().required(),
       }),

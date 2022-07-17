@@ -13,7 +13,6 @@ services:
       - AUTHORIZATION_URL
       - MESSAGING_URL
       - WEBSOCKET_EDGE_URL
-      - SECRET
       - S3_ENDPOINT
       - S3_ACCESS_KEY
       - S3_SECRET_KEY

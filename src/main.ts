@@ -17,11 +17,9 @@ async function bootstrap() {
   const prismaService = app.get(PrismaService);
   await prismaService.enableShutdownHooks(app);
 
-  const configService = app.get(ConfigService);
-
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
-  app.setGlobalPrefix('api');
 
+  const configService = app.get(ConfigService);
   await app.listen(configService.get<number>('PORT'), '0.0.0.0');
 }
 bootstrap();

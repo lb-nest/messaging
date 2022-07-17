@@ -1,5 +1,4 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
 import { ChannelModule } from 'src/channel/channel.module';
 import { PrismaService } from 'src/prisma.service';
 import { S3Service } from 'src/s3.service';
@@ -10,7 +9,7 @@ import { ChatService } from './chat.service';
 import { MessageService } from './message.service';
 
 @Module({
-  imports: [ConfigModule, ChannelModule],
+  imports: [ChannelModule],
   controllers: [ChatController],
   providers: [
     ChatService,

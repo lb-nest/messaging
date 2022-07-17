@@ -9,9 +9,8 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { Auth } from 'src/auth/auth.decorator';
-import { TokenPayload } from 'src/auth/entities/token-payload.entity';
-import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
+import { BearerAuthGuard } from 'src/auth/bearer-auth.guard';
+import { User } from 'src/auth/user.decorator';
 import { TransformInterceptor } from 'src/shared/interceptors/transform.interceptor';
 import { CreateWebhookDto } from './dto/create-webhook.dto';
 import { UpdateWebhookDto } from './dto/update-webhook.dto';
@@ -22,35 +21,32 @@ import { WebhookService } from './webhook.service';
 export class WebhookController {
   constructor(private readonly webhookService: WebhookService) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Webhook))
   @Post()
-  create(
-    @Auth() user: TokenPayload,
-    @Body() createWebhookDto: CreateWebhookDto,
-  ) {
+  create(@User() user: any, @Body() createWebhookDto: CreateWebhookDto) {
     return this.webhookService.create(user.project.id, createWebhookDto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Webhook))
   @Get()
-  findAll(@Auth() user: TokenPayload) {
+  findAll(@User() user: any) {
     return this.webhookService.findAll(user.project.id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Webhook))
   @Get(':id')
-  findOne(@Auth() user: TokenPayload, @Param('id') id: string) {
+  findOne(@User() user: any, @Param('id') id: string) {
     return this.webhookService.findOne(user.project.id, Number(id));
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Webhook))
   @Patch(':id')
   update(
-    @Auth() user: TokenPayload,
+    @User() user: any,
     @Param('id') id: string,
     @Body() updateWebhookDto: UpdateWebhookDto,
   ) {
@@ -61,10 +57,10 @@ export class WebhookController {
     );
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Webhook))
   @Delete(':id')
-  delete(@Auth() user: TokenPayload, @Param('id') id: string) {
+  delete(@User() user: any, @Param('id') id: string) {
     return this.webhookService.delete(user.project.id, Number(id));
   }
 }

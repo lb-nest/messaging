@@ -12,10 +12,9 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { Auth } from 'src/auth/auth.decorator';
-import { TokenPayload } from 'src/auth/entities/token-payload.entity';
+import { BearerAuthGuard } from 'src/auth/bearer-auth.guard';
+import { User } from 'src/auth/user.decorator';
 import { TransformInterceptor } from 'src/shared/interceptors/transform.interceptor';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -34,18 +33,18 @@ export class ChatController {
     private readonly messageService: MessageService,
   ) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Chat))
   @Post()
-  create(@Auth() user: TokenPayload, @Body() createChatDto: CreateChatDto) {
+  create(@User() user: any, @Body() createChatDto: CreateChatDto) {
     return this.chatService.create(user.project.id, createChatDto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Chat))
   @Get()
   findAll(
-    @Auth() user: TokenPayload,
+    @User() user: any,
     @Query('ids') ids?: string,
     @Query('orderBy') orderBy?: Prisma.SortOrder,
   ) {
@@ -56,46 +55,46 @@ export class ChatController {
     );
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Chat))
   @Get(':id')
-  findOne(@Auth() user: TokenPayload, @Param('id') id: string) {
+  findOne(@User() user: any, @Param('id') id: string) {
     return this.chatService.findOne(user.project.id, Number(id));
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Chat))
   @Patch(':id')
   update(
-    @Auth() user: TokenPayload,
+    @User() user: any,
     @Param('id') id: string,
     @Body() updateChatDto: UpdateChatDto,
   ) {
     return this.chatService.update(user.project.id, Number(id), updateChatDto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Chat))
   @Delete(':id')
-  delete(@Auth() user: TokenPayload, @Param('id') id: string) {
+  delete(@User() user: any, @Param('id') id: string) {
     return this.chatService.delete(user.project.id, Number(id));
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Chat))
   @Post('/import')
   import(
-    @Auth() user: TokenPayload,
+    @User() user: any,
     @Body() importChatsDto: ImportChatsDto,
   ): Promise<Chat[]> {
     return this.chatService.import(user.project.id, importChatsDto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Message))
   @Post(':id/messages')
   createMessage(
-    @Auth() user: TokenPayload,
+    @User() user: any,
     @Param('id') id: string,
     @Body() createMessageDto: CreateMessageDto,
   ) {
@@ -106,17 +105,17 @@ export class ChatController {
     );
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Message))
   @Get(':id/messages')
-  findAllMessages(@Auth() user: TokenPayload, @Param('id') id: string) {
+  findAllMessages(@User() user: any, @Param('id') id: string) {
     return this.messageService.findAll(user.project.id, Number(id));
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @Put(':id/messages/read')
   markMessagesAsRead(
-    @Auth() user: TokenPayload,
+    @User() user: any,
     @Param('id') id: string,
     @Body() readMessagesDto: ReadMessagesDto,
   ) {
@@ -127,11 +126,11 @@ export class ChatController {
     );
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Message))
   @Patch(':chatId/messages/:id')
   updateMessage(
-    @Auth() user: TokenPayload,
+    @User() user: any,
     @Param('id') id: string,
     @Body() updateMessageDto: UpdateMessageDto,
   ) {
@@ -142,10 +141,10 @@ export class ChatController {
     );
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Message))
   @Delete(':chatId/messages/:id')
-  deleteMessage(@Auth() user: TokenPayload, @Param('id') id: string) {
+  deleteMessage(@User() user: any, @Param('id') id: string) {
     return this.messageService.delete(user.project.id, Number(id));
   }
 }

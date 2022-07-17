@@ -9,10 +9,9 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { Auth } from 'src/auth/auth.decorator';
-import { TokenPayload } from 'src/auth/entities/token-payload.entity';
+import { BearerAuthGuard } from 'src/auth/bearer-auth.guard';
+import { User } from 'src/auth/user.decorator';
 import { TransformInterceptor } from 'src/shared/interceptors/transform.interceptor';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateHsmDto } from './dto/create-hsm.dto';
 import { UpdateHsmDto } from './dto/update-hsm.dto';
 import { Hsm } from './entities/hsm.entity';
@@ -22,42 +21,42 @@ import { HsmService } from './hsm.service';
 export class HsmController {
   constructor(private readonly hsmService: HsmService) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Hsm))
   @Post()
-  create(@Auth() user: TokenPayload, @Body() createHsmDto: CreateHsmDto) {
+  create(@User() user: any, @Body() createHsmDto: CreateHsmDto) {
     return this.hsmService.create(user.project.id, createHsmDto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Hsm))
   @Get()
-  findAll(@Auth() user: TokenPayload) {
+  findAll(@User() user: any) {
     return this.hsmService.findAll(user.project.id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Hsm))
   @Get(':id')
-  findOne(@Auth() user: TokenPayload, @Param('id') id: string) {
+  findOne(@User() user: any, @Param('id') id: string) {
     return this.hsmService.findOne(user.project.id, Number(id));
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Hsm))
   @Patch(':id')
   update(
-    @Auth() user: TokenPayload,
+    @User() user: any,
     @Param('id') id: string,
     @Body() updateHsmDto: UpdateHsmDto,
   ) {
     return this.hsmService.update(user.project.id, Number(id), updateHsmDto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Hsm))
   @Delete(':id')
-  delete(@Auth() user: TokenPayload, @Param('id') id: string) {
+  delete(@User() user: any, @Param('id') id: string) {
     return this.hsmService.delete(user.project.id, Number(id));
   }
 }

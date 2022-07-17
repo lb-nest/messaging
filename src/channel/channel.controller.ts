@@ -9,10 +9,9 @@ import {
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { Auth } from 'src/auth/auth.decorator';
-import { TokenPayload } from 'src/auth/entities/token-payload.entity';
+import { BearerAuthGuard } from 'src/auth/bearer-auth.guard';
+import { User } from 'src/auth/user.decorator';
 import { TransformInterceptor } from 'src/shared/interceptors/transform.interceptor';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ChannelService } from './channel.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
@@ -22,35 +21,32 @@ import { Channel } from './entities/channel.entity';
 export class ChannelController {
   constructor(private readonly channelService: ChannelService) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Channel))
   @Post()
-  create(
-    @Auth() user: TokenPayload,
-    @Body() createChannelDto: CreateChannelDto,
-  ) {
+  create(@User() user: any, @Body() createChannelDto: CreateChannelDto) {
     return this.channelService.create(user.project.id, createChannelDto);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Channel))
   @Get()
-  findAll(@Auth() user: TokenPayload) {
+  findAll(@User() user: any) {
     return this.channelService.findAll(user.project.id);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Channel))
   @Get(':id')
-  findOne(@Auth() user: TokenPayload, @Param('id') id: string) {
+  findOne(@User() user: any, @Param('id') id: string) {
     return this.channelService.findOne(user.project.id, Number(id));
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Channel))
   @Patch(':id')
   update(
-    @Auth() user: TokenPayload,
+    @User() user: any,
     @Param('id') id: string,
     @Body() updateChannelDto: UpdateChannelDto,
   ) {
@@ -61,10 +57,10 @@ export class ChannelController {
     );
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(BearerAuthGuard)
   @UseInterceptors(new TransformInterceptor(Channel))
   @Delete(':id')
-  delete(@Auth() user: TokenPayload, @Param('id') id: string) {
+  delete(@User() user: any, @Param('id') id: string) {
     return this.channelService.delete(user.project.id, Number(id));
   }
 

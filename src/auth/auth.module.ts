@@ -1,24 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { JwtModule } from '@nestjs/jwt';
-import { PassportModule } from '@nestjs/passport';
-import { PrismaService } from 'src/prisma.service';
-import { JwtStrategy } from './jwt.strategy';
+import { ConfigModule } from '@nestjs/config';
+import { BearerStrategy } from './bearer.strategy';
 
 @Module({
-  imports: [
-    ConfigModule,
-    PassportModule,
-    JwtModule.registerAsync({
-      imports: [ConfigModule],
-      useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('SECRET'),
-      }),
-      inject: [ConfigService],
-    }),
-  ],
-  providers: [JwtStrategy, PrismaService],
-  controllers: [],
-  exports: [],
+  imports: [ConfigModule],
+  providers: [BearerStrategy],
 })
 export class AuthModule {}

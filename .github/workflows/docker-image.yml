@@ -4,9 +4,6 @@ on:
   push:
     branches: [ "master" ]
 
-env:
-  DOCKER_HUB_REPOSITORY: ${{ github.event.repository.name }}
-
 jobs:
 
   build:
@@ -37,6 +34,6 @@ jobs:
         file: ./Dockerfile
         builder: ${{ steps.buildx.outputs.name }}
         push: true
-        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.DOCKER_HUB_REPOSITORY }}:${{ steps.package.outputs.version }}
-        cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.DOCKER_HUB_REPOSITORY }}:buildcache
-        cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/${{ env.DOCKER_HUB_REPOSITORY }}:buildcache,mode=max
+        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}:${{ steps.package.outputs.version }}
+        cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}:buildcache
+        cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/${{ github.event.repository.name }}:buildcache,mode=max

@@ -1,11 +1,6 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
-import { ApiChannelRepository } from 'src/shared/api-channel.repository';
-import { WebhookSenderService } from 'src/shared/webhook-sender.service';
+import { ChannelRepository } from './channel.repository';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
 import { Channel } from './entities/channel.entity';
@@ -13,30 +8,32 @@ import { Channel } from './entities/channel.entity';
 @Injectable()
 export class ChannelService {
   constructor(
+    private readonly channelRepository: ChannelRepository,
     private readonly prismaService: PrismaService,
-    private readonly apiChannelRepository: ApiChannelRepository,
-    private readonly webhookSenderService: WebhookSenderService,
   ) {}
 
-  async create(
+  create(
     projectId: number,
     createChannelDto: CreateChannelDto,
   ): Promise<Channel> {
-    return this.apiChannelRepository
+    return this.channelRepository
       .get(createChannelDto.type)
       .create(projectId, createChannelDto);
   }
 
-  async findAll(projectId: number): Promise<Channel[]> {
+  findAll(projectId: number): Promise<Channel[]> {
     return this.prismaService.channel.findMany({
       where: {
         projectId,
       },
+      orderBy: {
+        id: 'desc',
+      },
     });
   }
 
-  async findOne(projectId: number, id: number): Promise<Channel> {
-    const channel = await this.prismaService.channel.findUnique({
+  findOne(projectId: number, id: number): Promise<Channel> {
+    return this.prismaService.channel.findUniqueOrThrow({
       where: {
         projectId_id: {
           projectId,
@@ -44,66 +41,41 @@ export class ChannelService {
         },
       },
     });
-
-    if (!channel) {
-      throw new NotFoundException();
-    }
-
-    return channel;
   }
 
-  async update(
+  update(
     projectId: number,
-    id: number,
     updateChannelDto: UpdateChannelDto,
   ): Promise<Channel> {
-    const channel = await this.prismaService.channel
-      .update({
-        where: {
-          projectId_id: {
-            projectId,
-            id,
-          },
+    return this.prismaService.channel.update({
+      where: {
+        projectId_id: {
+          projectId,
+          id: updateChannelDto.id,
         },
-        data: updateChannelDto,
-      })
-      .catch(() => undefined);
-
-    if (!channel) {
-      throw new NotFoundException();
-    }
-
-    return channel;
+      },
+      data: updateChannelDto,
+    });
   }
 
-  async delete(projectId: number, id: number): Promise<Channel> {
-    const channel = await this.prismaService.channel
-      .delete({
-        where: {
-          projectId_id: {
-            projectId,
-            id,
-          },
+  remove(projectId: number, id: number): Promise<Channel> {
+    return this.prismaService.channel.delete({
+      where: {
+        projectId_id: {
+          projectId,
+          id,
         },
-      })
-      .catch(() => undefined);
-
-    if (!channel) {
-      throw new BadRequestException();
-    }
-
-    return channel;
+      },
+    });
   }
 
   async handle(id: number, event: any): Promise<unknown> {
-    const channel = await this.prismaService.channel.findUnique({
+    const channel = await this.prismaService.channel.findUniqueOrThrow({
       where: {
         id,
       },
     });
 
-    return this.apiChannelRepository
-      .get(channel.type)
-      .handle(channel, event, this.webhookSenderService);
+    return this.channelRepository.get(channel.type).handle(channel, event);
   }
 }

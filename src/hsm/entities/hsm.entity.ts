@@ -1,7 +1,8 @@
 import { Exclude, Type } from 'class-transformer';
 import { Approval } from './approval.entity';
+import Prisma from '@prisma/client';
 
-export class Hsm {
+export class Hsm implements Prisma.Hsm {
   id: number;
 
   @Exclude()
@@ -14,7 +15,9 @@ export class Hsm {
 
   text: string;
 
-  buttons?: any;
+  attachments: any;
+
+  buttons: any;
 
   createdAt: Date;
 

@@ -1,30 +1,27 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
 import { PassportStrategy } from '@nestjs/passport';
-import axios, { AxiosInstance } from 'axios';
 import { Strategy } from 'passport-http-bearer';
+import { lastValueFrom } from 'rxjs';
+import { AUTH_SERVICE } from 'src/shared/constants/broker';
+import { TokenPayload } from './entities/token-payload.entity';
 
 @Injectable()
-export class BearerStrategy extends PassportStrategy(Strategy, 'bearer') {
-  private readonly axios: AxiosInstance;
-
-  constructor(private readonly configService: ConfigService) {
+export class BearerStrategy extends PassportStrategy(Strategy) {
+  constructor(@Inject(AUTH_SERVICE) private readonly client: ClientProxy) {
     super();
-
-    this.axios = axios.create({
-      baseURL: this.configService.get<string>('AUTHORIZATION_URL'),
-    });
   }
 
-  async validate(token: string): Promise<any> {
+  async validate(token: string): Promise<TokenPayload> {
     try {
-      const res = await this.axios.get('/projects/@me/token/verify', {
-        headers: {
-          authorization: `Bearer ${token}`,
-        },
-      });
-
-      return res.data;
+      return await lastValueFrom(
+        this.client.send<TokenPayload>('auth.validateToken', {
+          headers: {
+            authorization: `Bearer ${token}`,
+          },
+          payload: null,
+        }),
+      );
     } catch {
       throw new UnauthorizedException();
     }

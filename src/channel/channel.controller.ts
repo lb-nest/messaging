@@ -1,17 +1,17 @@
 import {
   Body,
   Controller,
-  Delete,
-  Get,
   Param,
-  Patch,
+  ParseIntPipe,
   Post,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import { Auth } from 'src/auth/auth.decorator';
 import { BearerAuthGuard } from 'src/auth/bearer-auth.guard';
-import { User } from 'src/auth/user.decorator';
-import { TransformInterceptor } from 'src/shared/interceptors/transform.interceptor';
+import { TokenPayload } from 'src/auth/entities/token-payload.entity';
+import { PlainToClassInterceptor } from 'src/shared/interceptors/plain-to-class.interceptor';
 import { ChannelService } from './channel.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
@@ -21,51 +21,58 @@ import { Channel } from './entities/channel.entity';
 export class ChannelController {
   constructor(private readonly channelService: ChannelService) {}
 
+  @MessagePattern('channels.create')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Channel))
-  @Post()
-  create(@User() user: any, @Body() createChannelDto: CreateChannelDto) {
-    return this.channelService.create(user.project.id, createChannelDto);
+  @UseInterceptors(new PlainToClassInterceptor(Channel))
+  create(
+    @Auth() auth: TokenPayload,
+    @Payload('payload') createChannelDto: CreateChannelDto,
+  ): Promise<Channel> {
+    return this.channelService.create(auth.project.id, createChannelDto);
   }
 
+  @MessagePattern('channels.findAll')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Channel))
-  @Get()
-  findAll(@User() user: any) {
-    return this.channelService.findAll(user.project.id);
+  @UseInterceptors(new PlainToClassInterceptor(Channel))
+  findAll(@Auth() auth: TokenPayload): Promise<Channel[]> {
+    return this.channelService.findAll(auth.project.id);
   }
 
+  @MessagePattern('channels.findOne')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Channel))
-  @Get(':id')
-  findOne(@User() user: any, @Param('id') id: string) {
-    return this.channelService.findOne(user.project.id, Number(id));
+  @UseInterceptors(new PlainToClassInterceptor(Channel))
+  findOne(
+    @Auth() auth: TokenPayload,
+    @Payload('payload', ParseIntPipe) id: number,
+  ): Promise<Channel> {
+    return this.channelService.findOne(auth.project.id, id);
   }
 
+  @MessagePattern('channels.update')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Channel))
-  @Patch(':id')
+  @UseInterceptors(new PlainToClassInterceptor(Channel))
   update(
-    @User() user: any,
-    @Param('id') id: string,
-    @Body() updateChannelDto: UpdateChannelDto,
-  ) {
-    return this.channelService.update(
-      user.project.id,
-      Number(id),
-      updateChannelDto,
-    );
+    @Auth() auth: TokenPayload,
+    @Payload('payload') updateChannelDto: UpdateChannelDto,
+  ): Promise<Channel> {
+    return this.channelService.update(auth.project.id, updateChannelDto);
   }
 
+  @MessagePattern('channels.remove')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Channel))
-  @Delete(':id')
-  delete(@User() user: any, @Param('id') id: string) {
-    return this.channelService.delete(user.project.id, Number(id));
+  @UseInterceptors(new PlainToClassInterceptor(Channel))
+  remove(
+    @Auth() auth: TokenPayload,
+    @Payload('payload', ParseIntPipe) id: number,
+  ): Promise<Channel> {
+    return this.channelService.remove(auth.project.id, id);
   }
 
   @Post(':id/webhook')
-  handle(@Param('id') id: string, @Body() event: any) {
-    return this.channelService.handle(Number(id), event);
+  handle(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() event: any,
+  ): Promise<unknown> {
+    return this.channelService.handle(id, event);
   }
 }

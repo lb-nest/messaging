@@ -1,7 +1,7 @@
 import { AttachmentType } from '@prisma/client';
 import { IsEnum, IsUrl, IsOptional, IsString } from 'class-validator';
 
-export class Attachment {
+export class CreateAttachmentDto {
   @IsEnum(AttachmentType)
   type: AttachmentType;
 

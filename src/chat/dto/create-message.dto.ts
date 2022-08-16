@@ -1,26 +1,32 @@
-import { Transform, TransformFnParams, Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
-  IsNotEmpty,
+  IsInt,
   IsOptional,
+  IsString,
   ValidateNested,
 } from 'class-validator';
-import { Attachment } from './create-attachment.dto';
+import { CreateAttachmentDto } from './create-attachment.dto';
+import { CreateButtonDto } from './create-button.dto';
 
 export class CreateMessageDto {
+  @IsInt()
+  chatId: number;
+
+  @Transform(({ value }) => value?.trim())
   @IsOptional()
-  @IsNotEmpty()
-  @Transform(({ value }) => value.trim())
+  @IsString()
   text?: string;
 
-  @Type(() => Attachment)
+  @Type(() => CreateAttachmentDto)
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  attachments: Attachment[] = [];
+  attachments?: CreateAttachmentDto[];
 
+  @Type(() => CreateButtonDto)
   @IsOptional()
   @IsArray()
-  @Transform(({ value }: TransformFnParams) => value ?? undefined)
-  buttons?: any[];
+  @ValidateNested({ each: true })
+  buttons?: CreateButtonDto[];
 }

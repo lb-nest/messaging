@@ -1,8 +1,8 @@
-import { MessageStatus } from '@prisma/client';
+import Prisma from '@prisma/client';
 import { Exclude, Type } from 'class-transformer';
 import { Content } from './content.entity';
 
-export class Message {
+export class Message implements Prisma.Message {
   id: number;
 
   @Exclude()
@@ -10,7 +10,7 @@ export class Message {
 
   fromMe: boolean;
 
-  status: MessageStatus;
+  status: Prisma.MessageStatus;
 
   @Exclude()
   externalId: string;

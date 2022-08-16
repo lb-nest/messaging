@@ -1,13 +1,12 @@
 import { NotImplementedException } from '@nestjs/common';
-import * as Prisma from '@prisma/client';
+import Prisma from '@prisma/client';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
 import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
-import { ApiChannel } from './api-channel.interface';
-import { WebhookSenderService } from './webhook-sender.service';
+import { AbstractChannel } from './abstract.channel';
 
-export class InstagramApiChannel extends ApiChannel {
+export class VkontakteChannel extends AbstractChannel {
   async create(
     projectId: number,
     createChannelDto: CreateChannelDto,
@@ -23,11 +22,7 @@ export class InstagramApiChannel extends ApiChannel {
     throw new NotImplementedException();
   }
 
-  async handle(
-    channel: Prisma.Channel,
-    event: any,
-    webhookSenderService: WebhookSenderService,
-  ): Promise<void> {
+  async handle(channel: Prisma.Channel, event: any): Promise<void> {
     throw new NotImplementedException();
   }
 }

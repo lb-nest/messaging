@@ -1,17 +1,32 @@
 import { Transform } from 'class-transformer';
-import { IsArray, IsNotEmpty, IsOptional } from 'class-validator';
+import {
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+import { CreateAttachmentDto } from 'src/chat/dto/create-attachment.dto';
+import { CreateButtonDto } from 'src/chat/dto/create-button.dto';
 
 export class CreateHsmDto {
+  @Transform(({ value }) => value?.trim())
+  @IsString()
   @IsNotEmpty()
-  @Transform(({ value }) => value.trim())
   code: string;
 
+  @Transform(({ value }) => value?.trim())
+  @IsString()
   @IsNotEmpty()
-  @Transform(({ value }) => value.trim())
   text: string;
 
   @IsOptional()
   @IsArray()
-  @Transform(({ value }) => value ?? undefined)
-  buttons?: any[];
+  @ValidateNested({ each: true })
+  attachments?: CreateAttachmentDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  buttons?: CreateButtonDto[];
 }

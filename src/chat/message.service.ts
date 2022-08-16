@@ -1,9 +1,10 @@
-import { Injectable, NotImplementedException } from '@nestjs/common';
-import { MessageStatus, WebhookEventType } from '@prisma/client';
+import { Inject, Injectable, NotImplementedException } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { MessageStatus } from '@prisma/client';
 import { plainToClass } from 'class-transformer';
+import { ChannelRepository } from 'src/channel/channel.repository';
 import { PrismaService } from 'src/prisma.service';
-import { ApiChannelRepository } from 'src/shared/api-channel.repository';
-import { WebhookSenderService } from 'src/shared/webhook-sender.service';
+import { BACKEND } from 'src/shared/constants/broker';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { ReadMessagesDto } from './dto/read-messages.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -13,28 +14,29 @@ import { MessageWithChatId } from './entities/message-with-chat-id.entity';
 @Injectable()
 export class MessageService {
   constructor(
+    @Inject(BACKEND) private readonly client: ClientProxy,
+    private readonly channelRepository: ChannelRepository,
     private readonly prismaService: PrismaService,
-    private readonly webhookSenderService: WebhookSenderService,
-    private readonly apiChannelRepository: ApiChannelRepository,
   ) {}
 
   async create(
     projectId: number,
-    chatId: number,
     createMessageDto: CreateMessageDto,
   ): Promise<MessageWithChatId[]> {
-    const { channel, ...chat } = await this.prismaService.chat.findFirst({
-      where: {
-        id: chatId,
-        channel: {
-          projectId,
+    const { channel, ...chat } = await this.prismaService.chat.findFirstOrThrow(
+      {
+        where: {
+          id: createMessageDto.chatId,
+          channel: {
+            projectId,
+          },
+        },
+        include: {
+          contact: true,
+          channel: true,
         },
       },
-      include: {
-        contact: true,
-        channel: true,
-      },
-    });
+    );
 
     await this.prismaService.chat.update({
       where: {
@@ -45,30 +47,29 @@ export class MessageService {
       },
     });
 
-    const messages = await this.apiChannelRepository
+    const messages = await this.channelRepository
       .get(channel.type)
       .send(channel, chat, createMessageDto);
 
-    await this.webhookSenderService.dispatchAsync(projectId, {
-      type: WebhookEventType.OutgoingChats,
-      payload: {
-        ...chat,
-        messages: [messages.at(-1)],
-      },
+    this.client.emit('backend.chatsReceived', {
+      projectId: channel.projectId,
+      payload: [
+        {
+          ...chat,
+          messages: messages.slice(-1),
+        },
+      ],
     });
 
-    await this.webhookSenderService.dispatchAsync(projectId, {
-      type: WebhookEventType.OutgoingMessages,
+    this.client.emit('backend.messagesReceived', {
+      project: channel.projectId,
       payload: messages,
     });
 
     return messages;
   }
 
-  async findAll(
-    projectId: number,
-    chatId: number,
-  ): Promise<MessageWithChatId[]> {
+  findAll(projectId: number, chatId: number): Promise<MessageWithChatId[]> {
     return this.prismaService.message.findMany({
       where: {
         chat: {
@@ -100,21 +101,19 @@ export class MessageService {
     });
   }
 
-  async update(
+  update(
     projectId: number,
-    id: number,
     updateMessageDto: UpdateMessageDto,
   ): Promise<MessageWithChatId> {
     throw new NotImplementedException();
   }
 
-  async delete(projectId: number, id: number): Promise<MessageWithChatId> {
+  remove(projectId: number, chatId: number): Promise<MessageWithChatId> {
     throw new NotImplementedException();
   }
 
   async markAsRead(
     projectId: number,
-    id: number,
     readMessagesDto: ReadMessagesDto,
   ): Promise<void> {
     const messages = await this.prismaService.message.updateMany({
@@ -135,41 +134,43 @@ export class MessageService {
     });
 
     if (messages.count > 0) {
-      this.webhookSenderService.dispatch(projectId, {
-        type: WebhookEventType.OutgoingChats,
-        payload: plainToClass(
-          Chat,
-          await this.prismaService.chat.update({
-            where: {
-              id,
-            },
-            data: {
-              unreadCount: {
-                decrement: messages.count,
+      this.client.emit('backend.chatsReceived', {
+        projectId,
+        payload: [
+          plainToClass(
+            Chat,
+            await this.prismaService.chat.update({
+              where: {
+                id: readMessagesDto.chatId,
               },
-            },
-            include: {
-              contact: true,
-              messages: {
-                orderBy: {
-                  id: 'desc',
+              data: {
+                unreadCount: {
+                  decrement: messages.count,
                 },
-                take: 1,
-                include: {
-                  content: {
-                    orderBy: {
-                      id: 'desc',
-                    },
-                    take: 1,
-                    include: {
-                      attachments: true,
+              },
+              include: {
+                contact: true,
+                messages: {
+                  orderBy: {
+                    id: 'desc',
+                  },
+                  take: 1,
+                  include: {
+                    content: {
+                      orderBy: {
+                        id: 'desc',
+                      },
+                      take: 1,
+                      include: {
+                        attachments: true,
+                      },
                     },
                   },
                 },
               },
-            },
-          }),
-        ),
+            }),
+          ),
+        ],
       });
     }
   }

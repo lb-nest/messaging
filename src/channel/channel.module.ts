@@ -1,20 +1,14 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
+import { AppModule } from 'src/app.module';
 import { PrismaService } from 'src/prisma.service';
 import { S3Service } from 'src/s3.service';
-import { ApiChannelRepository } from 'src/shared/api-channel.repository';
-import { WebhookSenderService } from 'src/shared/webhook-sender.service';
 import { ChannelController } from './channel.controller';
+import { ChannelRepository } from './channel.repository';
 import { ChannelService } from './channel.service';
 
 @Module({
+  imports: [forwardRef(() => AppModule)],
   controllers: [ChannelController],
-  providers: [
-    ChannelService,
-    PrismaService,
-    S3Service,
-    ApiChannelRepository,
-    WebhookSenderService,
-  ],
-  exports: [ChannelService],
+  providers: [PrismaService, S3Service, ChannelRepository, ChannelService],
 })
 export class ChannelModule {}

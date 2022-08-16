@@ -1,12 +1,11 @@
+import Prisma from '@prisma/client';
 import { Exclude } from 'class-transformer';
 
-export class Contact {
+export class Contact implements Prisma.Contact {
   @Exclude()
   chatId: number;
 
-  username: string;
-
   name: string;
 
-  avatarUrl?: string;
+  avatarUrl: string | null;
 }

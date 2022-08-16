@@ -1,14 +1,12 @@
-import { BadRequestException } from '@nestjs/common';
-import * as Prisma from '@prisma/client';
+import Prisma from '@prisma/client';
 import TelegramBot from 'node-telegram-bot-api';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
 import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
-import { ApiChannel } from './api-channel.interface';
-import { WebhookSenderService } from './webhook-sender.service';
+import { AbstractChannel } from './abstract.channel';
 
-export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
+export class TelegramChannel extends AbstractChannel<TelegramBot.Update> {
   private readonly SEND_METHODS = {
     [Prisma.AttachmentType.Audio]: 'sendAudio',
     [Prisma.AttachmentType.Document]: 'sendDocument',
@@ -20,28 +18,24 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
     projectId: number,
     createChannelDto: CreateChannelDto,
   ): Promise<Channel> {
-    try {
-      const bot = new TelegramBot(createChannelDto.token);
-      await bot.getMe();
+    const bot = new TelegramBot(createChannelDto.token);
+    await bot.getMe();
 
-      const channel = await this.prismaService.channel.create({
-        data: {
-          projectId,
-          ...createChannelDto,
-          status: Prisma.ChannelStatus.Connected,
-        },
-      });
+    const channel = await this.prismaService.channel.create({
+      data: {
+        projectId,
+        ...createChannelDto,
+        status: Prisma.ChannelStatus.Connected,
+      },
+    });
 
-      await bot.setWebHook(
-        this.configService
-          .get<string>('MESSAGING_URL')
-          .concat(`/channels/${channel.id}/webhook`),
-      );
+    await bot.setWebHook(
+      this.configService
+        .get<string>('MESSAGING_URL')
+        .concat(`/channels/${channel.id}/webhook`),
+    );
 
-      return channel;
-    } catch {
-      throw new BadRequestException();
-    }
+    return channel;
   }
 
   async send(
@@ -107,7 +101,6 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
   async handle(
     channel: Prisma.Channel,
     event: TelegramBot.Update,
-    webhookSenderService: WebhookSenderService,
   ): Promise<'ok'> {
     const telegramMessage = event.message ?? event.edited_message;
     if (!telegramMessage) {
@@ -136,19 +129,21 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
           buttons: undefined,
         },
       },
-      String(telegramMessage.message_id.toString()),
+      String(telegramMessage.message_id),
     );
 
-    await webhookSenderService.dispatchAsync(channel.projectId, {
-      type: Prisma.WebhookEventType.IncomingChats,
-      payload: {
-        ...chat,
-        messages: [message],
-      },
+    this.client.emit('backend.chatsReceived', {
+      projectId: channel.projectId,
+      payload: [
+        {
+          ...chat,
+          messages: [message],
+        },
+      ],
     });
 
-    await webhookSenderService.dispatchAsync(channel.projectId, {
-      type: Prisma.WebhookEventType.IncomingMessages,
+    this.client.emit('backend.messagesReceived', {
+      project: channel.projectId,
       payload: [message],
     });
 
@@ -168,10 +163,8 @@ export class TelegramApiChannel extends ApiChannel<TelegramBot.Update> {
       );
     }
 
-    const name = [chat.first_name, chat.last_name].filter(Boolean).join(' ');
     return {
-      username: chat.username,
-      name,
+      name: [chat.first_name, chat.last_name].filter(Boolean).join(' '),
       avatarUrl,
     };
   }

@@ -1,17 +1,14 @@
 import {
-  Body,
   Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
+  ParseIntPipe,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import { Auth } from 'src/auth/auth.decorator';
 import { BearerAuthGuard } from 'src/auth/bearer-auth.guard';
-import { User } from 'src/auth/user.decorator';
-import { TransformInterceptor } from 'src/shared/interceptors/transform.interceptor';
+import { TokenPayload } from 'src/auth/entities/token-payload.entity';
+import { PlainToClassInterceptor } from 'src/shared/interceptors/plain-to-class.interceptor';
 import { CreateHsmDto } from './dto/create-hsm.dto';
 import { UpdateHsmDto } from './dto/update-hsm.dto';
 import { Hsm } from './entities/hsm.entity';
@@ -21,42 +18,50 @@ import { HsmService } from './hsm.service';
 export class HsmController {
   constructor(private readonly hsmService: HsmService) {}
 
+  @MessagePattern('hsm.create')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Hsm))
-  @Post()
-  create(@User() user: any, @Body() createHsmDto: CreateHsmDto) {
-    return this.hsmService.create(user.project.id, createHsmDto);
-  }
-
-  @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Hsm))
-  @Get()
-  findAll(@User() user: any) {
-    return this.hsmService.findAll(user.project.id);
-  }
-
-  @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Hsm))
-  @Get(':id')
-  findOne(@User() user: any, @Param('id') id: string) {
-    return this.hsmService.findOne(user.project.id, Number(id));
-  }
-
-  @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Hsm))
-  @Patch(':id')
-  update(
-    @User() user: any,
-    @Param('id') id: string,
-    @Body() updateHsmDto: UpdateHsmDto,
+  @UseInterceptors(new PlainToClassInterceptor(Hsm))
+  create(
+    @Auth() auth: TokenPayload,
+    @Payload('payload') createHsmDto: CreateHsmDto,
   ) {
-    return this.hsmService.update(user.project.id, Number(id), updateHsmDto);
+    return this.hsmService.create(auth.project.id, createHsmDto);
   }
 
+  @MessagePattern('hsm.findAll')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Hsm))
-  @Delete(':id')
-  delete(@User() user: any, @Param('id') id: string) {
-    return this.hsmService.delete(user.project.id, Number(id));
+  @UseInterceptors(new PlainToClassInterceptor(Hsm))
+  findAll(@Auth() auth: TokenPayload) {
+    return this.hsmService.findAll(auth.project.id);
+  }
+
+  @MessagePattern('hsm.findOne')
+  @UseGuards(BearerAuthGuard)
+  @UseInterceptors(new PlainToClassInterceptor(Hsm))
+  findOne(
+    @Auth() auth: TokenPayload,
+    @Payload('payload', ParseIntPipe) id: number,
+  ) {
+    return this.hsmService.findOne(auth.project.id, id);
+  }
+
+  @MessagePattern('hsm.update')
+  @UseGuards(BearerAuthGuard)
+  @UseInterceptors(new PlainToClassInterceptor(Hsm))
+  update(
+    @Auth() auth: TokenPayload,
+    @Payload('payload') updateHsmDto: UpdateHsmDto,
+  ) {
+    return this.hsmService.update(auth.project.id, updateHsmDto);
+  }
+
+  @MessagePattern('hsm.remove')
+  @UseGuards(BearerAuthGuard)
+  @UseInterceptors(new PlainToClassInterceptor(Hsm))
+  remove(
+    @Auth() auth: TokenPayload,
+    @Payload('payload', ParseIntPipe) id: number,
+  ) {
+    return this.hsmService.remove(auth.project.id, id);
   }
 }

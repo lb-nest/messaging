@@ -1,23 +1,22 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
+import { AppModule } from 'src/app.module';
 import { ChannelModule } from 'src/channel/channel.module';
+import { ChannelRepository } from 'src/channel/channel.repository';
 import { PrismaService } from 'src/prisma.service';
 import { S3Service } from 'src/s3.service';
-import { ApiChannelRepository } from 'src/shared/api-channel.repository';
-import { WebhookSenderService } from 'src/shared/webhook-sender.service';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
 import { MessageService } from './message.service';
 
 @Module({
-  imports: [ChannelModule],
+  imports: [forwardRef(() => AppModule), ChannelModule],
   controllers: [ChatController],
   providers: [
-    ChatService,
-    MessageService,
+    ChannelRepository,
     PrismaService,
     S3Service,
-    WebhookSenderService,
-    ApiChannelRepository,
+    ChatService,
+    MessageService,
   ],
 })
 export class ChatModule {}

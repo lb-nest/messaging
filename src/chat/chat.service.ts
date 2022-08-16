@@ -1,44 +1,68 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-  NotImplementedException,
-} from '@nestjs/common';
-import { ChannelType, Prisma } from '@prisma/client';
-import { ChannelService } from 'src/channel/channel.service';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateChatDto } from './dto/create-chat.dto';
-import { ImportChatsDto } from './dto/import-chats.dto';
+import { FindAllChatsDto } from './dto/find-all-chats.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 import { Chat } from './entities/chat.entity';
 
 @Injectable()
 export class ChatService {
-  constructor(
-    private readonly prismaService: PrismaService,
-    private readonly channelService: ChannelService,
-  ) {}
+  constructor(private readonly prismaService: PrismaService) {}
 
-  async create(projectId: number, createChatDto: CreateChatDto): Promise<Chat> {
-    throw new NotImplementedException();
+  create(projectId: number, createChatDto: CreateChatDto): Promise<Chat> {
+    return this.prismaService.chat.create({
+      data: {
+        channel: {
+          connect: {
+            projectId_id: {
+              projectId,
+              id: createChatDto.channelId,
+            },
+          },
+        },
+        accountId: createChatDto.accountId,
+        contact: {
+          create: {
+            name: createChatDto.name,
+            avatarUrl: createChatDto.avatarUrl,
+          },
+        },
+      },
+      include: {
+        contact: true,
+        messages: {
+          orderBy: {
+            id: 'desc',
+          },
+          take: 1,
+          include: {
+            content: {
+              orderBy: {
+                id: 'desc',
+              },
+              take: 1,
+              include: {
+                attachments: true,
+              },
+            },
+          },
+        },
+      },
+    });
   }
 
-  async findAll(
+  findAll(
     projectId: number,
-    ids?: number[],
-    orderBy?: Prisma.SortOrder,
+    findAllChatsDto: FindAllChatsDto,
   ): Promise<Chat[]> {
     return this.prismaService.chat.findMany({
       where: {
         id: {
-          in: ids,
+          in: findAllChatsDto.ids,
         },
         channel: {
           projectId,
         },
-      },
-      orderBy: {
-        id: orderBy,
       },
       include: {
         contact: true,
@@ -63,8 +87,8 @@ export class ChatService {
     });
   }
 
-  async findOne(projectId: number, id: number): Promise<Chat> {
-    const chat = await this.prismaService.chat.findFirst({
+  findOne(projectId: number, id: number): Promise<Chat> {
+    return this.prismaService.chat.findFirstOrThrow({
       where: {
         id,
         channel: {
@@ -92,55 +116,61 @@ export class ChatService {
         },
       },
     });
-
-    if (!chat) {
-      throw new NotFoundException();
-    }
-
-    return chat;
   }
 
-  async update(
-    projectId: number,
-    id: number,
-    updateChatDto: UpdateChatDto,
-  ): Promise<Chat> {
-    const chat = await this.prismaService.chat.findFirst({
+  async update(projectId: number, updateChatDto: UpdateChatDto): Promise<Chat> {
+    const chat = await this.prismaService.chat.findFirstOrThrow({
       where: {
-        id,
+        id: updateChatDto.id,
         channel: {
           projectId,
         },
       },
+      select: {
+        id: true,
+      },
     });
 
-    if (!chat) {
-      throw new NotFoundException();
-    }
-
-    await this.prismaService.contact.update({
+    return this.prismaService.chat.update({
       where: {
-        chatId: chat.id,
+        id: chat.id,
       },
       data: updateChatDto,
+      include: {
+        contact: true,
+        messages: {
+          orderBy: {
+            id: 'desc',
+          },
+          take: 1,
+          include: {
+            content: {
+              orderBy: {
+                id: 'desc',
+              },
+              take: 1,
+              include: {
+                attachments: true,
+              },
+            },
+          },
+        },
+      },
     });
-
-    return this.findOne(projectId, id);
   }
 
-  async delete(projectId: number, id: number): Promise<Chat> {
-    const chat = await this.prismaService.chat.findFirst({
+  async remove(projectId: number, id: number): Promise<Chat> {
+    const chat = await this.prismaService.chat.findFirstOrThrow({
       where: {
         id,
         channel: {
           projectId,
         },
       },
+      select: {
+        id: true,
+      },
     });
-
-    if (!chat) {
-      throw new NotFoundException();
-    }
 
     return this.prismaService.chat.delete({
       where: {
@@ -167,62 +197,5 @@ export class ChatService {
         },
       },
     });
-  }
-
-  async import(
-    projectId: number,
-    importChatsDto: ImportChatsDto,
-  ): Promise<Chat[]> {
-    const channel = await this.channelService.findOne(
-      projectId,
-      importChatsDto.channelId,
-    );
-
-    if (channel.type !== ChannelType.Whatsapp) {
-      throw new BadRequestException(
-        'Importing contacts is allowed only for Whatsapp channels',
-      );
-    }
-
-    return this.prismaService.$transaction(
-      importChatsDto.chats.map(({ accountId, ...contact }) =>
-        this.prismaService.chat.create({
-          data: {
-            channel: {
-              connect: {
-                projectId_id: {
-                  projectId,
-                  id: importChatsDto.channelId,
-                },
-              },
-            },
-            accountId,
-            contact: {
-              create: contact,
-            },
-          },
-          include: {
-            contact: true,
-            messages: {
-              orderBy: {
-                id: 'desc',
-              },
-              take: 1,
-              include: {
-                content: {
-                  orderBy: {
-                    id: 'desc',
-                  },
-                  take: 1,
-                  include: {
-                    attachments: true,
-                  },
-                },
-              },
-            },
-          },
-        }),
-      ),
-    );
   }
 }

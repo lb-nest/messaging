@@ -1,24 +1,18 @@
 import {
-  Body,
   Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Put,
-  Query,
+  ParseIntPipe,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { MessagePattern, Payload } from '@nestjs/microservices';
+import { Auth } from 'src/auth/auth.decorator';
 import { BearerAuthGuard } from 'src/auth/bearer-auth.guard';
-import { User } from 'src/auth/user.decorator';
-import { TransformInterceptor } from 'src/shared/interceptors/transform.interceptor';
+import { TokenPayload } from 'src/auth/entities/token-payload.entity';
+import { PlainToClassInterceptor } from 'src/shared/interceptors/plain-to-class.interceptor';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { CreateMessageDto } from './dto/create-message.dto';
-import { ImportChatsDto } from './dto/import-chats.dto';
+import { FindAllChatsDto } from './dto/find-all-chats.dto';
 import { ReadMessagesDto } from './dto/read-messages.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
@@ -33,118 +27,102 @@ export class ChatController {
     private readonly messageService: MessageService,
   ) {}
 
+  @MessagePattern('chats.create')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Chat))
-  @Post()
-  create(@User() user: any, @Body() createChatDto: CreateChatDto) {
-    return this.chatService.create(user.project.id, createChatDto);
+  @UseInterceptors(new PlainToClassInterceptor(Chat))
+  create(
+    @Auth() auth: TokenPayload,
+    @Payload('payload') createChatDto: CreateChatDto,
+  ) {
+    return this.chatService.create(auth.project.id, createChatDto);
   }
 
+  @MessagePattern('chats.findAll')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Chat))
-  @Get()
+  @UseInterceptors(new PlainToClassInterceptor(Chat))
   findAll(
-    @User() user: any,
-    @Query('ids') ids?: string,
-    @Query('orderBy') orderBy?: Prisma.SortOrder,
+    @Auth() auth: TokenPayload,
+    @Payload('payload') findAllChatsDto: FindAllChatsDto,
   ) {
-    return this.chatService.findAll(
-      user.project.id,
-      ids?.split(',').map(Number),
-      orderBy,
-    );
+    return this.chatService.findAll(auth.project.id, findAllChatsDto);
   }
 
+  @MessagePattern('chats.findOne')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Chat))
-  @Get(':id')
-  findOne(@User() user: any, @Param('id') id: string) {
-    return this.chatService.findOne(user.project.id, Number(id));
+  @UseInterceptors(new PlainToClassInterceptor(Chat))
+  findOne(
+    @Auth() auth: TokenPayload,
+    @Payload('payload', ParseIntPipe) id: number,
+  ) {
+    return this.chatService.findOne(auth.project.id, id);
   }
 
+  @MessagePattern('chats.update')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Chat))
-  @Patch(':id')
+  @UseInterceptors(new PlainToClassInterceptor(Chat))
   update(
-    @User() user: any,
-    @Param('id') id: string,
-    @Body() updateChatDto: UpdateChatDto,
+    @Auth() auth: TokenPayload,
+    @Payload('payload') updateChatDto: UpdateChatDto,
   ) {
-    return this.chatService.update(user.project.id, Number(id), updateChatDto);
+    return this.chatService.update(auth.project.id, updateChatDto);
   }
 
+  @MessagePattern('remove')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Chat))
-  @Delete(':id')
-  delete(@User() user: any, @Param('id') id: string) {
-    return this.chatService.delete(user.project.id, Number(id));
+  @UseInterceptors(new PlainToClassInterceptor(Chat))
+  remove(
+    @Auth() auth: TokenPayload,
+    @Payload('payload', ParseIntPipe) id: number,
+  ) {
+    return this.chatService.remove(auth.project.id, id);
   }
 
+  @MessagePattern('chats.createMessage')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Chat))
-  @Post('/import')
-  import(
-    @User() user: any,
-    @Body() importChatsDto: ImportChatsDto,
-  ): Promise<Chat[]> {
-    return this.chatService.import(user.project.id, importChatsDto);
-  }
-
-  @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Message))
-  @Post(':id/messages')
+  @UseInterceptors(new PlainToClassInterceptor(Message))
   createMessage(
-    @User() user: any,
-    @Param('id') id: string,
-    @Body() createMessageDto: CreateMessageDto,
+    @Auth() auth: TokenPayload,
+    @Payload('payload') createMessageDto: CreateMessageDto,
   ) {
-    return this.messageService.create(
-      user.project.id,
-      Number(id),
-      createMessageDto,
-    );
+    return this.messageService.create(auth.project.id, createMessageDto);
   }
 
+  @MessagePattern('chats.findAllMessages')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Message))
-  @Get(':id/messages')
-  findAllMessages(@User() user: any, @Param('id') id: string) {
-    return this.messageService.findAll(user.project.id, Number(id));
+  @UseInterceptors(new PlainToClassInterceptor(Message))
+  findAllMessages(
+    @Auth() auth: TokenPayload,
+    @Payload('payload', ParseIntPipe) id: number,
+  ) {
+    return this.messageService.findAll(auth.project.id, id);
   }
 
+  @MessagePattern('chats.markMessagesAsRead')
   @UseGuards(BearerAuthGuard)
-  @Put(':id/messages/read')
   markMessagesAsRead(
-    @User() user: any,
-    @Param('id') id: string,
-    @Body() readMessagesDto: ReadMessagesDto,
+    @Auth() auth: TokenPayload,
+    @Payload('payload') readMessagesDto: ReadMessagesDto,
   ) {
-    return this.messageService.markAsRead(
-      user.project.id,
-      Number(id),
-      readMessagesDto,
-    );
+    return this.messageService.markAsRead(auth.project.id, readMessagesDto);
   }
 
+  @MessagePattern('chats.updateMessage')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Message))
-  @Patch(':chatId/messages/:id')
+  @UseInterceptors(new PlainToClassInterceptor(Message))
   updateMessage(
-    @User() user: any,
-    @Param('id') id: string,
-    @Body() updateMessageDto: UpdateMessageDto,
+    @Auth() auth: TokenPayload,
+    @Payload('payload') updateMessageDto: UpdateMessageDto,
   ) {
-    return this.messageService.update(
-      user.project.id,
-      Number(id),
-      updateMessageDto,
-    );
+    return this.messageService.update(auth.project.id, updateMessageDto);
   }
 
+  @MessagePattern('chats.removeMessage')
   @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new TransformInterceptor(Message))
-  @Delete(':chatId/messages/:id')
-  deleteMessage(@User() user: any, @Param('id') id: string) {
-    return this.messageService.delete(user.project.id, Number(id));
+  @UseInterceptors(new PlainToClassInterceptor(Message))
+  deleteMessage(
+    @Auth() auth: TokenPayload,
+    @Payload('payload', ParseIntPipe) id: number,
+  ) {
+    return this.messageService.remove(auth.project.id, id);
   }
 }

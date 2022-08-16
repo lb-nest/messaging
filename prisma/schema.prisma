@@ -20,8 +20,7 @@ enum ChannelType {
 
 enum ChannelStatus {
   Connected
-  Connecting
-  Error
+  Failed
 }
 
 model Channel {
@@ -41,7 +40,6 @@ model Channel {
 model Contact {
   chatId    Int     @id
   chat      Chat    @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  username  String
   name      String
   avatarUrl String?
 }
@@ -62,10 +60,10 @@ model Chat {
 }
 
 enum MessageStatus {
-  Accepted
+  Submitted
   Delivered
   Read
-  Error
+  Failed
 }
 
 model Message {
@@ -88,7 +86,7 @@ model Content {
   message     Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
   text        String?
   attachments Attachment[]
-  buttons     Json?
+  buttons     Json         @default("[]")
 }
 
 enum AttachmentType {
@@ -107,51 +105,35 @@ model Attachment {
   name      String?
 }
 
-model TemplateMessage {
-  id        Int        @id @default(autoincrement())
-  projectId Int
-  code      String
-  approval  Approval[]
-  text      String
-  buttons   Json?
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+model Hsm {
+  id          Int        @id @default(autoincrement())
+  projectId   Int
+  code        String
+  approval    Approval[]
+  text        String
+  attachments Json       @default("[]")
+  buttons     Json       @default("[]")
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   @@unique([projectId, id])
   @@unique([projectId, code])
 }
 
 enum ApprovalStatus {
-  Requested
+  Submitted
   Approved
   Rejected
 }
 
 model Approval {
   channelId      Int
-  channel        Channel         @relation(fields: [channelId], references: [id])
-  templateId     Int
-  template       TemplateMessage @relation(fields: [templateId], references: [id])
+  channel        Channel        @relation(fields: [channelId], references: [id])
+  hsmId          Int
+  hsm            Hsm            @relation(fields: [hsmId], references: [id])
+  externalId     String?
   status         ApprovalStatus
   rejectedReason String?
 
-  @@id([channelId, templateId])
-}
-
-enum WebhookEventType {
-  IncomingChats
-  OutgoingChats
-  IncomingMessages
-  OutgoingMessages
-  All
-}
-
-model Webhook {
-  id        Int              @id @default(autoincrement())
-  projectId Int
-  name      String
-  url       String
-  eventType WebhookEventType
-
-  @@unique([projectId, id])
+  @@id([channelId, hsmId])
 }

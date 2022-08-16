@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { S3 } from 'aws-sdk';
 import contentDisposition from 'content-disposition';
 import { Stream } from 'stream';
-import * as uuid from 'uuid';
+import { v4 } from 'uuid';
 
 @Injectable()
 export class S3Service {
@@ -29,7 +29,7 @@ export class S3Service {
     const res = await this.s3
       .upload({
         Bucket: this.configService.get<string>('S3_BUCKET'),
-        Key: uuid.v4(),
+        Key: v4(),
         ContentType: mimeType,
         ContentDisposition: fileName && contentDisposition(fileName),
         Body: body,

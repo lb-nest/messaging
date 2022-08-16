@@ -1,8 +1,8 @@
-import { ApprovalStatus } from '@prisma/client';
+import Prisma from '@prisma/client';
 import { Exclude, Type } from 'class-transformer';
 import { Channel } from 'src/channel/entities/channel.entity';
 
-export class Approval {
+export class Approval implements Prisma.Approval {
   @Exclude()
   channelId: number;
 
@@ -10,9 +10,12 @@ export class Approval {
   channel: Channel;
 
   @Exclude()
-  templateId: number;
+  hsmId: number;
 
-  status: ApprovalStatus;
+  @Exclude()
+  externalId: string;
 
-  rejectedReason?: string;
+  status: Prisma.ApprovalStatus;
+
+  rejectedReason: string | null;
 }

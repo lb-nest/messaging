@@ -1,5 +1,6 @@
 import { ConfigService } from '@nestjs/config';
-import * as Prisma from '@prisma/client';
+import { ClientProxy } from '@nestjs/microservices';
+import Prisma from '@prisma/client';
 import { plainToClass } from 'class-transformer';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
@@ -8,12 +9,12 @@ import { Chat } from 'src/chat/entities/chat.entity';
 import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
 import { PrismaService } from 'src/prisma.service';
 import { S3Service } from 'src/s3.service';
-import { WebhookSenderService } from './webhook-sender.service';
 
-export abstract class ApiChannel<T = unknown> {
+export abstract class AbstractChannel<T = unknown> {
   constructor(
-    protected readonly prismaService: PrismaService,
     protected readonly configService: ConfigService,
+    protected readonly client: ClientProxy,
+    protected readonly prismaService: PrismaService,
     protected readonly s3Service: S3Service,
   ) {}
 
@@ -28,11 +29,7 @@ export abstract class ApiChannel<T = unknown> {
     message: CreateMessageDto,
   ): Promise<MessageWithChatId[]>;
 
-  abstract handle(
-    channel: Prisma.Channel,
-    event: T,
-    webhookSenderService: WebhookSenderService,
-  ): Promise<unknown>;
+  abstract handle(channel: Prisma.Channel, event: T): Promise<unknown>;
 
   protected async createChat(
     channelId: number,
@@ -50,6 +47,7 @@ export abstract class ApiChannel<T = unknown> {
         },
         create: {
           accountId,
+          unreadCount: 1,
           channel: {
             connect: {
               id: channelId,

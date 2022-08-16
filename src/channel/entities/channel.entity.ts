@@ -1,7 +1,7 @@
-import { ChannelStatus, ChannelType } from '@prisma/client';
+import Prisma from '@prisma/client';
 import { Exclude } from 'class-transformer';
 
-export class Channel {
+export class Channel implements Prisma.Channel {
   id: number;
 
   @Exclude()
@@ -9,9 +9,12 @@ export class Channel {
 
   name: string;
 
-  type: ChannelType;
+  type: Prisma.ChannelType;
 
-  status: ChannelStatus;
+  status: Prisma.ChannelStatus;
+
+  @Exclude()
+  accountId: string | null;
 
   @Exclude()
   token: string;

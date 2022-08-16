@@ -10,7 +10,6 @@ services:
       - 3070:8080
     environment:
       - DATABASE_URL=postgres://postgres:${POSTGRES_PASSWORD}@db/${POSTGRES_DB}?schema=public
-      - AUTHORIZATION_URL
       - MESSAGING_URL
       - WEBSOCKET_EDGE_URL
       - S3_ENDPOINT

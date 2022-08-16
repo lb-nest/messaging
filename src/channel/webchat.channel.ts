@@ -1,5 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
-import * as Prisma from '@prisma/client';
+import Prisma from '@prisma/client';
 import axios from 'axios';
 import { plainToClass } from 'class-transformer';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
@@ -7,27 +6,22 @@ import { WebchatEventDto } from 'src/channel/dto/webchat-event.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
 import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
-import { ButtonType } from 'src/hsm/enums/button-type.enum';
-import * as uuid from 'uuid';
-import { ApiChannel } from './api-channel.interface';
-import { WebhookSenderService } from './webhook-sender.service';
+import { ButtonType } from 'src/chat/enums/button-type.enum';
+import { v4 } from 'uuid';
+import { AbstractChannel } from './abstract.channel';
 
-export class WebchatApiChannel extends ApiChannel<WebchatEventDto> {
-  async create(
+export class WebchatChannel extends AbstractChannel<WebchatEventDto> {
+  create(
     projectId: number,
     createChannelDto: CreateChannelDto,
   ): Promise<Channel> {
-    try {
-      return await this.prismaService.channel.create({
-        data: {
-          projectId,
-          ...createChannelDto,
-          status: Prisma.ChannelStatus.Connected,
-        },
-      });
-    } catch {
-      throw new BadRequestException();
-    }
+    return this.prismaService.channel.create({
+      data: {
+        projectId,
+        ...createChannelDto,
+        status: Prisma.ChannelStatus.Connected,
+      },
+    });
   }
 
   async send(
@@ -126,15 +120,10 @@ export class WebchatApiChannel extends ApiChannel<WebchatEventDto> {
     );
   }
 
-  async handle(
-    channel: Prisma.Channel,
-    event: WebchatEventDto,
-    webhookSenderService: WebhookSenderService,
-  ): Promise<'ok'> {
+  async handle(channel: Prisma.Channel, event: WebchatEventDto): Promise<'ok'> {
     const chat = await this.createChat(channel.id, event.session_id, {
       create: {
         name: 'N/A',
-        username: event.session_id,
       },
     });
 
@@ -148,19 +137,21 @@ export class WebchatApiChannel extends ApiChannel<WebchatEventDto> {
           buttons: undefined,
         },
       },
-      uuid.v4(),
+      v4(),
     );
 
-    await webhookSenderService.dispatchAsync(channel.projectId, {
-      type: Prisma.WebhookEventType.IncomingChats,
-      payload: {
-        ...chat,
-        messages: [message],
-      },
+    this.client.emit('backend.chatsReceived', {
+      projectId: channel.projectId,
+      payload: [
+        {
+          ...chat,
+          messages: [message],
+        },
+      ],
     });
 
-    await webhookSenderService.dispatchAsync(channel.projectId, {
-      type: Prisma.WebhookEventType.IncomingMessages,
+    this.client.emit('backend.messagesReceived', {
+      project: channel.projectId,
       payload: [message],
     });
 

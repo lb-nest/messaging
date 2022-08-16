@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateHsmDto } from './dto/create-hsm.dto';
 import { UpdateHsmDto } from './dto/update-hsm.dto';
@@ -13,34 +8,13 @@ import { Hsm } from './entities/hsm.entity';
 export class HsmService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async create(projectId: number, createHsmDto: CreateHsmDto): Promise<Hsm> {
-    const hsm = await this.prismaService.templateMessage
-      .create({
-        data: {
-          projectId,
-          ...createHsmDto,
-        },
-        include: {
-          approval: {
-            include: {
-              channel: true,
-            },
-          },
-        },
-      })
-      .catch(() => undefined);
-
-    if (!hsm) {
-      throw new ConflictException();
-    }
-
-    return hsm;
-  }
-
-  async findAll(projectId: number): Promise<Hsm[]> {
-    return this.prismaService.templateMessage.findMany({
-      where: {
+  create(projectId: number, createHsmDto: CreateHsmDto): Promise<Hsm> {
+    return this.prismaService.hsm.create({
+      data: {
         projectId,
+        ...createHsmDto,
+        attachments: createHsmDto.attachments as any,
+        buttons: createHsmDto.buttons as any,
       },
       include: {
         approval: {
@@ -52,8 +26,26 @@ export class HsmService {
     });
   }
 
-  async findOne(projectId: number, id: number): Promise<Hsm> {
-    const hsm = await this.prismaService.templateMessage.findUnique({
+  findAll(projectId: number): Promise<Hsm[]> {
+    return this.prismaService.hsm.findMany({
+      where: {
+        projectId,
+      },
+      orderBy: {
+        id: 'desc',
+      },
+      include: {
+        approval: {
+          include: {
+            channel: true,
+          },
+        },
+      },
+    });
+  }
+
+  findOne(projectId: number, id: number): Promise<Hsm> {
+    return this.prismaService.hsm.findUniqueOrThrow({
       where: {
         projectId_id: {
           projectId,
@@ -68,68 +60,46 @@ export class HsmService {
         },
       },
     });
-
-    if (!hsm) {
-      throw new BadRequestException();
-    }
-
-    return hsm;
   }
 
-  async update(
-    projectId: number,
-    id: number,
-    updateHsmDto: UpdateHsmDto,
-  ): Promise<Hsm> {
-    const hsm = await this.prismaService.templateMessage
-      .update({
-        where: {
-          projectId_id: {
-            projectId,
-            id,
+  update(projectId: number, updateHsmDto: UpdateHsmDto): Promise<Hsm> {
+    return this.prismaService.hsm.update({
+      where: {
+        projectId_id: {
+          projectId,
+          id: updateHsmDto.id,
+        },
+      },
+      data: {
+        ...updateHsmDto,
+        attachments: updateHsmDto.attachments as any,
+        buttons: updateHsmDto.buttons as any,
+      },
+      include: {
+        approval: {
+          include: {
+            channel: true,
           },
         },
-        data: updateHsmDto,
-        include: {
-          approval: {
-            include: {
-              channel: true,
-            },
-          },
-        },
-      })
-      .catch(() => undefined);
-
-    if (!hsm) {
-      throw new NotFoundException();
-    }
-
-    return hsm;
+      },
+    });
   }
 
-  async delete(projectId: number, id: number): Promise<Hsm> {
-    const hsm = await this.prismaService.templateMessage
-      .delete({
-        where: {
-          projectId_id: {
-            projectId,
-            id,
+  async remove(projectId: number, id: number): Promise<Hsm> {
+    return this.prismaService.hsm.delete({
+      where: {
+        projectId_id: {
+          projectId,
+          id,
+        },
+      },
+      include: {
+        approval: {
+          include: {
+            channel: true,
           },
         },
-        include: {
-          approval: {
-            include: {
-              channel: true,
-            },
-          },
-        },
-      })
-      .catch(() => undefined);
-
-    if (!hsm) {
-      throw new NotFoundException();
-    }
-
-    return hsm;
+      },
+    });
   }
 }

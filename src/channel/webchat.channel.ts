@@ -1,6 +1,7 @@
 import Prisma from '@prisma/client';
 import axios from 'axios';
 import { plainToClass } from 'class-transformer';
+import merge from 'deepmerge';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { WebchatEventDto } from 'src/channel/dto/webchat-event.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
@@ -133,26 +134,29 @@ export class WebchatChannel extends AbstractChannel<WebchatEventDto> {
       {
         create: {
           text: event.message,
-          attachments: undefined,
-          buttons: undefined,
         },
       },
       v4(),
     );
 
-    this.client.emit('backend.chatsReceived', {
+    this.client.emit('chats.received', {
       projectId: channel.projectId,
-      payload: [
+      payload: merge.all([
+        chat,
         {
-          ...chat,
+          contact: {
+            webchatId: chat.accountId,
+          },
+        },
+        {
           messages: [message],
         },
-      ],
+      ]),
     });
 
-    this.client.emit('backend.messagesReceived', {
-      project: channel.projectId,
-      payload: [message],
+    this.client.emit('messages.received', {
+      projectId: channel.projectId,
+      payload: message,
     });
 
     return 'ok';

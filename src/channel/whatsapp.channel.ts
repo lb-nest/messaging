@@ -1,6 +1,7 @@
 import { GupshupClientApi, GupshupPartnerApi } from '@lb-nest/gupshup-api';
 import Prisma from '@prisma/client';
 import axios from 'axios';
+import merge from 'deepmerge';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
@@ -286,19 +287,24 @@ export class WhatsappChannel extends AbstractChannel {
       event.payload.id,
     );
 
-    this.client.emit('backend.chatsReceived', {
+    this.client.emit('chats.received', {
       projectId: channel.projectId,
-      payload: [
+      payload: merge.all([
+        chat,
         {
-          ...chat,
+          contact: {
+            whatsappId: chat.accountId,
+          },
+        },
+        {
           messages: [message],
         },
-      ],
+      ]),
     });
 
-    this.client.emit('backend.messagesReceived', {
-      project: channel.projectId,
-      payload: [message],
+    this.client.emit('messages.received', {
+      projectId: channel.projectId,
+      payload: message,
     });
   }
 

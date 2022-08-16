@@ -12,7 +12,7 @@ export class Chat implements Prisma.Chat {
   @Type(() => Contact)
   contact: Contact;
 
-  @Exclude()
+  @Exclude({ toPlainOnly: true })
   accountId: string;
 
   isNew: boolean;

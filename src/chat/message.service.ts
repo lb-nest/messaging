@@ -51,20 +51,20 @@ export class MessageService {
       .get(channel.type)
       .send(channel, chat, createMessageDto);
 
-    this.client.emit('backend.chatsReceived', {
+    this.client.emit('chats.received', {
       projectId: channel.projectId,
-      payload: [
-        {
-          ...chat,
-          messages: messages.slice(-1),
-        },
-      ],
+      payload: {
+        ...chat,
+        messages: messages.slice(-1),
+      },
     });
 
-    this.client.emit('backend.messagesReceived', {
-      project: channel.projectId,
-      payload: messages,
-    });
+    for (const message of messages) {
+      this.client.emit('messages.received', {
+        projectId: channel.projectId,
+        payload: message,
+      });
+    }
 
     return messages;
   }
@@ -134,7 +134,7 @@ export class MessageService {
     });
 
     if (messages.count > 0) {
-      this.client.emit('backend.chatsReceived', {
+      this.client.emit('chats.received', {
         projectId,
         payload: [
           plainToClass(

@@ -1,4 +1,5 @@
 import Prisma from '@prisma/client';
+import merge from 'deepmerge';
 import TelegramBot from 'node-telegram-bot-api';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
@@ -132,19 +133,24 @@ export class TelegramChannel extends AbstractChannel<TelegramBot.Update> {
       String(telegramMessage.message_id),
     );
 
-    this.client.emit('backend.chatsReceived', {
+    this.client.emit('chats.received', {
       projectId: channel.projectId,
-      payload: [
+      payload: merge.all([
+        chat,
         {
-          ...chat,
+          contact: {
+            telegramId: chat.accountId,
+          },
+        },
+        {
           messages: [message],
         },
-      ],
+      ]),
     });
 
-    this.client.emit('backend.messagesReceived', {
-      project: channel.projectId,
-      payload: [message],
+    this.client.emit('messages.received', {
+      projectId: channel.projectId,
+      payload: message,
     });
 
     return 'ok';

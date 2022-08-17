@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { ChannelModule } from './channel/channel.module';
 import { ChatModule } from './chat/chat.module';
 import { HsmModule } from './hsm/hsm.module';
+import { PrismaService } from './prisma.service';
 import { BACKEND } from './shared/constants/broker';
 
 @Module({
@@ -45,6 +46,7 @@ import { BACKEND } from './shared/constants/broker';
     HsmModule,
   ],
   providers: [
+    PrismaService,
     {
       provide: APP_INTERCEPTOR,
       useClass: ClassSerializerInterceptor,

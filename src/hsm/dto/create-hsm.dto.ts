@@ -1,4 +1,4 @@
-import { Transform } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsNotEmpty,
@@ -20,11 +20,13 @@ export class CreateHsmDto {
   @IsNotEmpty()
   text: string;
 
+  @Type(() => CreateAttachmentDto)
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   attachments?: CreateAttachmentDto[];
 
+  @Type(() => CreateButtonDto)
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

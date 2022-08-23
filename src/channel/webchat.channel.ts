@@ -142,14 +142,14 @@ export class WebchatChannel extends AbstractChannel<WebchatEventDto> {
     this.client.emit('chats.received', {
       projectId: channel.projectId,
       payload: merge.all([
-        chat,
         {
-          contact: {
-            webchatId: chat.accountId,
-          },
+          ...chat,
+          messages: [message],
         },
         {
-          messages: [message],
+          contact: {
+            telegramId: chat.accountId,
+          },
         },
       ]),
     });

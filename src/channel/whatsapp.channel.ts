@@ -290,14 +290,14 @@ export class WhatsappChannel extends AbstractChannel {
     this.client.emit('chats.received', {
       projectId: channel.projectId,
       payload: merge.all([
-        chat,
         {
-          contact: {
-            whatsappId: chat.accountId,
-          },
+          ...chat,
+          messages: [message],
         },
         {
-          messages: [message],
+          contact: {
+            telegramId: chat.accountId,
+          },
         },
       ]),
     });

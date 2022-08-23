@@ -136,14 +136,14 @@ export class TelegramChannel extends AbstractChannel<TelegramBot.Update> {
     this.client.emit('chats.received', {
       projectId: channel.projectId,
       payload: merge.all([
-        chat,
+        {
+          ...chat,
+          messages: [message],
+        },
         {
           contact: {
             telegramId: chat.accountId,
           },
-        },
-        {
-          messages: [message],
         },
       ]),
     });

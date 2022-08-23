@@ -118,24 +118,22 @@ export class ChatService {
     });
   }
 
-  async update(projectId: number, updateChatDto: UpdateChatDto): Promise<Chat> {
-    const chat = await this.prismaService.chat.findFirstOrThrow({
-      where: {
-        id: updateChatDto.id,
-        channel: {
-          projectId,
-        },
-      },
-      select: {
-        id: true,
-      },
-    });
+  async update(
+    projectId: number,
+    { id, accountId, ...updateChatDto }: UpdateChatDto,
+  ): Promise<Chat> {
+    const chat = await this.findOne(projectId, id);
 
     return this.prismaService.chat.update({
       where: {
         id: chat.id,
       },
-      data: updateChatDto,
+      data: {
+        accountId,
+        contact: {
+          update: updateChatDto,
+        },
+      },
       include: {
         contact: true,
         messages: {

@@ -6,6 +6,7 @@ import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
 import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
 import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
+import { ButtonType } from 'src/chat/enums/button-type.enum';
 import { AbstractChannel } from './abstract.channel';
 
 export class WhatsappChannel extends AbstractChannel {
@@ -108,6 +109,10 @@ export class WhatsappChannel extends AbstractChannel {
           if (message.text && i === 0) {
             msg.caption = message.buttons.reduce<string>((str, btn) => {
               switch (btn.type) {
+                case ButtonType.Phone:
+                case ButtonType.Url:
+                  return str.concat(` | [${btn.text},${btn.phone || btn.url}]`);
+
                 default:
                   return str.concat(` | [${btn.text}]`);
               }
@@ -136,6 +141,10 @@ export class WhatsappChannel extends AbstractChannel {
         type: 'text',
         text: message.buttons.reduce<string>((str, btn) => {
           switch (btn.type) {
+            case ButtonType.Phone:
+            case ButtonType.Url:
+              return str.concat(` | [${btn.text},${btn.phone || btn.url}]`);
+
             default:
               return str.concat(` | [${btn.text}]`);
           }

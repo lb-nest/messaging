@@ -2,9 +2,7 @@
 /dist
 /node_modules
 
-# Config
 .env
-.env.production
 
 # Logs
 logs

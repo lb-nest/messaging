@@ -148,7 +148,7 @@ export class WebchatChannel extends AbstractChannel<WebchatEventDto> {
         },
         {
           contact: {
-            telegramId: chat.accountId,
+            webchatId: chat.accountId,
           },
         },
       ]),

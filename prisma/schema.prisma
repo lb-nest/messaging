@@ -35,6 +35,9 @@ model Channel {
   approval  Approval[]
 
   @@unique([projectId, id])
+
+  @@index([projectId])
+  @@index([projectId, type])
 }
 
 model Contact {
@@ -103,6 +106,8 @@ model Attachment {
   type      AttachmentType
   url       String
   name      String?
+
+  @@index([type])
 }
 
 model Hsm {
@@ -118,6 +123,8 @@ model Hsm {
 
   @@unique([projectId, id])
   @@unique([projectId, code])
+
+  @@index([projectId])
 }
 
 enum ApprovalStatus {

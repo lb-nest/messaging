@@ -17,7 +17,7 @@ import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
 import { Channel } from './entities/channel.entity';
 
-@Controller('channels')
+@Controller()
 export class ChannelController {
   constructor(private readonly channelService: ChannelService) {}
 

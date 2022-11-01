@@ -20,7 +20,7 @@ import { Chat } from './entities/chat.entity';
 import { Message } from './entities/message.entity';
 import { MessageService } from './message.service';
 
-@Controller('chats')
+@Controller()
 export class ChatController {
   constructor(
     private readonly chatService: ChatService,

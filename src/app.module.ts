@@ -16,7 +16,8 @@ import { BACKEND } from './shared/constants/broker';
       isGlobal: true,
       validationSchema: Joi.object({
         DATABASE_URL: Joi.string().uri().required(),
-        PORT: Joi.number().default(8080),
+        BROKER_URL: Joi.string().uri().required(),
+        PORT: Joi.number().port().default(8080),
         S3_ENDPOINT: Joi.string().uri().required(),
         S3_ACCESS_KEY: Joi.string().required(),
         S3_SECRET_KEY: Joi.string().required(),

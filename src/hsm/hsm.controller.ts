@@ -14,7 +14,7 @@ import { UpdateHsmDto } from './dto/update-hsm.dto';
 import { Hsm } from './entities/hsm.entity';
 import { HsmService } from './hsm.service';
 
-@Controller('hsm')
+@Controller()
 export class HsmController {
   constructor(private readonly hsmService: HsmService) {}
 

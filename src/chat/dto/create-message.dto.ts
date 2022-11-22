@@ -2,6 +2,7 @@ import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
   ValidateNested,
@@ -12,6 +13,10 @@ import { CreateButtonDto } from './create-button.dto';
 export class CreateMessageDto {
   @IsInt()
   chatId: number;
+
+  @IsOptional()
+  @IsInt()
+  hsmId?: number;
 
   @Transform(({ value }) => value?.trim())
   @IsOptional()
@@ -29,4 +34,8 @@ export class CreateMessageDto {
   @IsArray()
   @ValidateNested({ each: true })
   buttons?: CreateButtonDto[];
+
+  @IsOptional()
+  @IsObject()
+  variables?: Record<string, string>;
 }

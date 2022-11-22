@@ -1,4 +1,5 @@
 import { GupshupClientApi, GupshupPartnerApi } from '@lb-nest/gupshup-api';
+import { NotFoundException } from '@nestjs/common';
 import Prisma from '@prisma/client';
 import axios from 'axios';
 import merge from 'deepmerge';
@@ -78,8 +79,12 @@ export class WhatsappChannel extends AbstractChannel {
     chat: Prisma.Chat,
     message: CreateMessageDto,
   ): Promise<MessageWithChatId[]> {
-    const [phone, token] = channel.token.split(':');
-    const api = new GupshupClientApi(phone, token);
+    if (typeof message.hsmId === 'number') {
+      return [
+        await this.sendHsm(channel, chat, message.hsmId, message.variables),
+      ];
+    }
+
 
     const messages: Prisma.Prisma.MessageUncheckedCreateInput[] = [];
 
@@ -179,6 +184,69 @@ export class WhatsappChannel extends AbstractChannel {
 
   async handle(channel: Prisma.Channel, event: any): Promise<void> {
     return this.HANDLERS[event.type]?.(channel, event);
+  }
+
+  private async sendHsm(
+    channel: Prisma.Channel,
+    chat: Prisma.Chat,
+    hsmId: number,
+    variables: Record<string, string> = {},
+  ): Promise<MessageWithChatId> {
+    const api = new GupshupPartnerApi(
+      this.configService.get<string>('GS_USER'),
+      this.configService.get<string>('GS_PASS'),
+    );
+
+    const approval = await this.prismaService.approval.findUniqueOrThrow({
+      where: {
+        channelId_hsmId: {
+          channelId: channel.id,
+          hsmId,
+        },
+      },
+      select: {
+        hsm: {
+          select: {
+            text: true,
+            attachments: true,
+            buttons: true,
+          },
+        },
+        externalId: true,
+      },
+    });
+
+    if (typeof approval.externalId !== 'string') {
+      throw new NotFoundException();
+    }
+
+    const { token } = channel.token as Record<string, string>;
+
+    const externalId = await api.sendMessageWithTemplateId(
+      token,
+      channel.accountId,
+      {
+        id: approval.externalId,
+        params: Object.values(variables),
+      },
+    );
+
+    return super.createMessage(
+      chat.id,
+      Prisma.MessageStatus.Submitted,
+      {
+        create: {
+          text: approval.hsm.text,
+          attachments: {
+            createMany: {
+              data: approval.hsm.attachments as Prisma.Attachment,
+            },
+          },
+          buttons: approval.hsm.buttons,
+        },
+      },
+      externalId,
+    );
   }
 
   private async handleUserEvent(

@@ -22,7 +22,7 @@
     "prepare": "husky install"
   },
   "dependencies": {
-    "@lb-nest/gupshup-api": "^1.0.7",
+    "@lb-nest/gupshup-api": "^1.0.8",
     "@nestjs/common": "^9.0.8",
     "@nestjs/config": "^2.2.0",
     "@nestjs/core": "^9.0.8",

@@ -30,12 +30,11 @@ model Channel {
   type      ChannelType
   status    ChannelStatus
   accountId String?       @unique
-  token     String
+  token     Json
   chats     Chat[]
   approval  Approval[]
 
   @@unique([projectId, id])
-
   @@index([projectId])
   @@index([projectId, type])
 }
@@ -123,7 +122,6 @@ model Hsm {
 
   @@unique([projectId, id])
   @@unique([projectId, code])
-
   @@index([projectId])
 }
 

@@ -45,7 +45,7 @@ export class TelegramChannel extends AbstractChannel<TelegramBot.Update> {
     message: CreateMessageDto,
   ): Promise<MessageWithChatId[]> {
     const messages: TelegramBot.Message[] = [];
-    const bot = new TelegramBot(channel.token);
+    const bot = new TelegramBot(channel.token as string);
 
     if (message.text) {
       messages.push(
@@ -108,7 +108,7 @@ export class TelegramChannel extends AbstractChannel<TelegramBot.Update> {
       return;
     }
 
-    const bot = new TelegramBot(channel.token);
+    const bot = new TelegramBot(channel.token as string);
 
     const chat = await this.createChat(
       channel.id,

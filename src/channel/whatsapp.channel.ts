@@ -45,7 +45,11 @@ export class WhatsappChannel extends AbstractChannel {
         name: createChannelDto.name,
         type: Prisma.ChannelType.Whatsapp,
         accountId: app.id,
-        token: `${app.phone}:${token}`,
+        token: {
+          token,
+          apiKey: createChannelDto.token,
+          phone: app.phone,
+        },
         status: Prisma.ChannelStatus.Connected,
       },
     });
@@ -85,6 +89,8 @@ export class WhatsappChannel extends AbstractChannel {
       ];
     }
 
+    const { phone, apiKey } = channel.token as Record<string, string>;
+    const api = new GupshupClientApi(phone, apiKey);
 
     const messages: Prisma.Prisma.MessageUncheckedCreateInput[] = [];
 

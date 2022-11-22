@@ -17,5 +17,5 @@ export class Channel implements Prisma.Channel {
   accountId: string | null;
 
   @Exclude()
-  token: string;
+  token: any;
 }

@@ -93,8 +93,8 @@ export class WebchatChannel extends AbstractChannel<WebchatEventDto> {
                     },
                   },
                   buttons: message.quick_replies?.map((button: any) => ({
-                    ...button,
                     type: ButtonType.QuickReply,
+                    text: button.title,
                   })),
                 },
               },

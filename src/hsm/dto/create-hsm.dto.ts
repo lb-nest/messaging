@@ -6,8 +6,8 @@ import {
   IsString,
   ValidateNested,
 } from 'class-validator';
-import { CreateAttachmentDto } from 'src/chat/dto/create-attachment.dto';
-import { CreateButtonDto } from 'src/chat/dto/create-button.dto';
+import { CreateAttachmentDto } from 'src/message/dto/create-attachment.dto';
+import { CreateButtonDto } from 'src/message/dto/create-button.dto';
 
 export class CreateHsmDto {
   @Transform(({ value }) => value?.trim())

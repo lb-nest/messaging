@@ -3,15 +3,15 @@ import axios from 'axios';
 import { plainToClass } from 'class-transformer';
 import merge from 'deepmerge';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
-import { WebchatEventDto } from 'src/channel/dto/webchat-event.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
-import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
-import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
-import { ButtonType } from 'src/chat/enums/button-type.enum';
+import { CreateMessageDto } from 'src/message/dto/create-message.dto';
+import { Message } from 'src/message/entities/message.entity';
+import { ButtonType } from 'src/message/enums/button-type.enum';
 import { v4 } from 'uuid';
 import { AbstractChannel } from './abstract.channel';
+import { WebchatEvent } from './interfaces/webchat-event.interface';
 
-export class WebchatChannel extends AbstractChannel<WebchatEventDto> {
+export class WebchatChannel extends AbstractChannel<WebchatEvent> {
   create(
     projectId: number,
     createChannelDto: CreateChannelDto,
@@ -29,7 +29,7 @@ export class WebchatChannel extends AbstractChannel<WebchatEventDto> {
     channel: Prisma.Channel,
     chat: Prisma.Chat,
     message: CreateMessageDto,
-  ): Promise<MessageWithChatId[]> {
+  ): Promise<Message[]> {
     const url = this.configService.get<string>('WEBSOCKET_EDGE_URL');
     const messages: any[] = [];
 
@@ -76,85 +76,70 @@ export class WebchatChannel extends AbstractChannel<WebchatEventDto> {
     return Promise.all(
       messages.map(async (message) =>
         plainToClass(
-          MessageWithChatId,
-          await this.prismaService.message.create({
-            data: {
-              chatId: chat.id,
-              externalId: message.message_id,
-              fromMe: true,
-              status: Prisma.MessageStatus.Delivered,
-              content: {
-                create: {
-                  text: message.text,
-                  attachments: {
-                    create: message.attachment && {
-                      type: Prisma.AttachmentType.Image,
-                      url: message.attachment.payload.src,
-                    },
+          Message,
+          await this.createMessage(
+            chat,
+            message.message_id,
+            {
+              create: {
+                text: message.text,
+                attachments: {
+                  create: message.attachment && {
+                    type: Prisma.AttachmentType.Image,
+                    url: message.attachment.payload.src,
                   },
-                  buttons: message.quick_replies?.map((button: any) => ({
-                    type: ButtonType.QuickReply,
-                    text: button.title,
-                  })),
                 },
+                buttons: message.quick_replies?.map((button: any) => ({
+                  type: ButtonType.QuickReply,
+                  text: button.title,
+                })),
               },
             },
-            include: {
-              chat: {
-                select: {
-                  id: true,
-                },
-              },
-              content: {
-                orderBy: {
-                  id: 'desc',
-                },
-                take: 1,
-                include: {
-                  attachments: true,
-                },
-              },
-            },
-          }),
+            Prisma.MessageStatus.Delivered,
+            true,
+          ),
         ),
       ),
     );
   }
 
-  async handle(channel: Prisma.Channel, event: WebchatEventDto): Promise<'ok'> {
-    const chat = await this.createChat(channel.id, event.session_id, {
-      create: {
-        name: 'N/A',
-      },
-    });
+  async handle(channel: Prisma.Channel, event: WebchatEvent): Promise<'ok'> {
+    const chat = await this.createChat(
+      channel.projectId,
+      channel.id,
+      event.session_id,
+    );
 
     const message = await this.createMessage(
-      chat.id,
-      Prisma.MessageStatus.Delivered,
+      chat,
+      v4(),
       {
         create: {
           text: event.message,
         },
       },
-      v4(),
+      Prisma.MessageStatus.Delivered,
     );
 
-    this.client.emit('chats.received', {
+    this.client.emit('receiveChat', {
       projectId: channel.projectId,
-      payload: merge.all([
+      chat: merge(
         chat,
         {
           contact: {
-            webchatId: chat.accountId,
+            name: 'N/A',
           },
           messages: [message],
         },
-      ]),
+        {
+          arrayMerge: (_, source) => source,
+        },
+      ),
     });
 
-    this.client.emit('messages.received', {
+    this.client.emit('receiveMessage', {
       projectId: channel.projectId,
-      payload: message,
+      message,
     });
 
     return 'ok';

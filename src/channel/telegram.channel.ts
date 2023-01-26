@@ -3,8 +3,8 @@ import merge from 'deepmerge';
 import TelegramBot from 'node-telegram-bot-api';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
-import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
-import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
+import { CreateMessageDto } from 'src/message/dto/create-message.dto';
+import { Message } from 'src/message/entities/message.entity';
 import { AbstractChannel } from './abstract.channel';
 
 export class TelegramChannel extends AbstractChannel<TelegramBot.Update> {
@@ -43,7 +43,7 @@ export class TelegramChannel extends AbstractChannel<TelegramBot.Update> {
     channel: Prisma.Channel,
     chat: Prisma.Chat,
     message: CreateMessageDto,
-  ): Promise<MessageWithChatId[]> {
+  ): Promise<Message[]> {
     const messages: TelegramBot.Message[] = [];
     const bot = new TelegramBot(channel.token as string);
 
@@ -81,8 +81,8 @@ export class TelegramChannel extends AbstractChannel<TelegramBot.Update> {
     return Promise.all(
       messages.map(async (message) =>
         this.createMessage(
-          chat.id,
-          Prisma.MessageStatus.Delivered,
+          chat,
+          message.message_id.toString(),
           {
             create: {
               text: message.text,
@@ -92,7 +92,7 @@ export class TelegramChannel extends AbstractChannel<TelegramBot.Update> {
               buttons: undefined,
             },
           },
-          message.message_id.toString(),
+          Prisma.MessageStatus.Delivered,
           true,
         ),
       ),
@@ -111,16 +111,14 @@ export class TelegramChannel extends AbstractChannel<TelegramBot.Update> {
     const bot = new TelegramBot(channel.token as string);
 
     const chat = await this.createChat(
+      channel.projectId,
       channel.id,
-      String(telegramMessage.chat.id),
-      {
-        create: await this.createContact(bot, telegramMessage.chat.id),
-      },
+      telegramMessage.chat.id.toString(),
     );
 
     const message = await this.createMessage(
-      chat.id,
-      Prisma.MessageStatus.Delivered,
+      chat,
+      telegramMessage.message_id.toString(),
       {
         create: {
           text: telegramMessage.text ?? telegramMessage.caption,
@@ -130,47 +128,31 @@ export class TelegramChannel extends AbstractChannel<TelegramBot.Update> {
           buttons: undefined,
         },
       },
-      String(telegramMessage.message_id),
+      Prisma.MessageStatus.Delivered,
     );
 
-    this.client.emit('chats.received', {
+    this.client.emit('receiveChat', {
       projectId: channel.projectId,
-      payload: merge.all([
+      chat: merge(
         chat,
         {
           contact: {
-            telegramId: chat.accountId,
+            name: 'N/A',
           },
           messages: [message],
         },
-      ]),
+        {
+          arrayMerge: (_, source) => source,
+        },
+      ),
     });
 
-    this.client.emit('messages.received', {
+    this.client.emit('receiveMessage', {
       projectId: channel.projectId,
-      payload: message,
+      message,
     });
 
     return 'ok';
-  }
-
-  private async createContact(
-    bot: TelegramBot,
-    chatId: TelegramBot.ChatId,
-  ): Promise<Omit<Prisma.Contact, 'chatId'>> {
-    const chat = await bot.getChat(chatId);
-
-    let avatarUrl: string;
-    if (chat.photo) {
-      avatarUrl = await this.s3Service.upload(
-        bot.getFileStream(chat.photo.big_file_id),
-      );
-    }
-
-    return {
-      name: [chat.first_name, chat.last_name].filter(Boolean).join(' '),
-      avatarUrl,
-    };
   }
 
   private async createAttachment(

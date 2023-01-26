@@ -6,17 +6,10 @@ import { PrismaService } from 'src/prisma.service';
 import { S3Service } from 'src/s3.service';
 import { ChatController } from './chat.controller';
 import { ChatService } from './chat.service';
-import { MessageService } from './message.service';
 
 @Module({
   imports: [forwardRef(() => AppModule), ChannelModule],
   controllers: [ChatController],
-  providers: [
-    ChannelRepository,
-    PrismaService,
-    S3Service,
-    ChatService,
-    MessageService,
-  ],
+  providers: [ChannelRepository, PrismaService, S3Service, ChatService],
 })
 export class ChatModule {}

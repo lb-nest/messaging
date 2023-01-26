@@ -12,7 +12,10 @@ import { CreateButtonDto } from './create-button.dto';
 
 export class CreateMessageDto {
   @IsInt()
-  chatId: number;
+  channelId: number;
+
+  @IsString()
+  accountId: string;
 
   @IsOptional()
   @IsInt()
@@ -37,5 +40,5 @@ export class CreateMessageDto {
 
   @IsOptional()
   @IsObject()
-  variables?: Record<string, string>;
+  variables?: Record<string, any>;
 }

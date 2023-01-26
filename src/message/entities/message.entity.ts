@@ -6,11 +6,19 @@ export class Message implements Prisma.Message {
   id: number;
 
   @Exclude()
-  chatId: number;
+  projectId: number;
+
+  // @Exclude()
+  channelId: number;
+
+  // @Exclude()
+  accountId: string;
 
   fromMe: boolean;
 
   status: Prisma.MessageStatus;
+
+  failedReason: string | null;
 
   @Exclude()
   externalId: string;

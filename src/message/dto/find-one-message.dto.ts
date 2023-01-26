@@ -1,9 +1,12 @@
 import { IsInt, IsString } from 'class-validator';
 
-export class CreateChatDto {
+export class FindOneMessageDto {
   @IsInt()
   channelId: number;
 
   @IsString()
   accountId: string;
+
+  @IsInt()
+  id: number;
 }

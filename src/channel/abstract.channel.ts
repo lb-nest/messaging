@@ -4,9 +4,9 @@ import Prisma from '@prisma/client';
 import { plainToClass } from 'class-transformer';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
-import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
 import { Chat } from 'src/chat/entities/chat.entity';
-import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
+import { CreateMessageDto } from 'src/message/dto/create-message.dto';
+import { Message } from 'src/message/entities/message.entity';
 import { PrismaService } from 'src/prisma.service';
 import { S3Service } from 'src/s3.service';
 
@@ -27,33 +27,37 @@ export abstract class AbstractChannel<T = unknown> {
     channel: Prisma.Channel,
     chat: Prisma.Chat,
     message: CreateMessageDto,
-  ): Promise<MessageWithChatId[]>;
+  ): Promise<Message[]>;
 
   abstract handle(channel: Prisma.Channel, event: T): Promise<unknown>;
 
   protected async createChat(
+    projectId: number,
     channelId: number,
     accountId: string,
-    contact: Prisma.Prisma.ContactCreateNestedOneWithoutChatInput,
   ): Promise<Chat> {
     return plainToClass(
       Chat,
       await this.prismaService.chat.upsert({
         where: {
-          channelId_accountId: {
+          projectId_channelId_accountId: {
+            projectId,
             channelId,
             accountId,
           },
         },
         create: {
+          projectId,
           accountId,
-          unreadCount: 1,
           channel: {
             connect: {
-              id: channelId,
+              projectId_id: {
+                projectId,
+                id: channelId,
+              },
             },
           },
-          contact,
+          unreadCount: 1,
         },
         update: {
           isNew: false,
@@ -62,7 +66,6 @@ export abstract class AbstractChannel<T = unknown> {
           },
         },
         include: {
-          contact: true,
           messages: {
             orderBy: {
               id: 'desc',
@@ -86,25 +89,31 @@ export abstract class AbstractChannel<T = unknown> {
   }
 
   protected async createMessage(
-    chatId: number,
-    status: Prisma.MessageStatus,
-    content: Prisma.Prisma.ContentCreateNestedManyWithoutMessageInput,
+    chat: Prisma.Chat,
     externalId: string,
+    content: Prisma.Prisma.ContentCreateNestedManyWithoutMessageInput,
+    status: Prisma.MessageStatus,
     fromMe = false,
-  ): Promise<MessageWithChatId> {
+  ): Promise<Message> {
     return plainToClass(
-      MessageWithChatId,
+      Message,
       await this.prismaService.message.upsert({
         where: {
-          chatId_externalId: {
-            chatId,
+          channelId_accountId_externalId: {
+            channelId: chat.channelId,
+            accountId: chat.accountId,
             externalId,
           },
         },
         create: {
+          projectId: chat.projectId,
           chat: {
             connect: {
-              id: chatId,
+              projectId_channelId_accountId: {
+                projectId: chat.projectId,
+                channelId: chat.channelId,
+                accountId: chat.accountId,
+              },
             },
           },
           fromMe,
@@ -117,11 +126,7 @@ export abstract class AbstractChannel<T = unknown> {
           updatedAt: new Date(),
         },
         include: {
-          chat: {
-            select: {
-              id: true,
-            },
-          },
+          chat: true,
           content: {
             orderBy: {
               id: 'desc',

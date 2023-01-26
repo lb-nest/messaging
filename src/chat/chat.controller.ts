@@ -1,128 +1,60 @@
-import {
-  Controller,
-  ParseIntPipe,
-  UseGuards,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Controller, ParseIntPipe, UseInterceptors } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { Auth } from 'src/auth/auth.decorator';
-import { BearerAuthGuard } from 'src/auth/bearer-auth.guard';
-import { TokenPayload } from 'src/auth/entities/token-payload.entity';
 import { PlainToClassInterceptor } from 'src/shared/interceptors/plain-to-class.interceptor';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-chat.dto';
-import { CreateMessageDto } from './dto/create-message.dto';
 import { FindAllChatsDto } from './dto/find-all-chats.dto';
-import { ReadMessagesDto } from './dto/read-messages.dto';
+import { FindOneChatDto } from './dto/find-one-chat.dto';
+import { RemoveChatDto } from './dto/remove-chat.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
-import { UpdateMessageDto } from './dto/update-message.dto';
 import { Chat } from './entities/chat.entity';
-import { Message } from './entities/message.entity';
-import { MessageService } from './message.service';
 
 @Controller()
 export class ChatController {
-  constructor(
-    private readonly chatService: ChatService,
-    private readonly messageService: MessageService,
-  ) {}
+  constructor(private readonly chatService: ChatService) {}
 
-  @MessagePattern('chats.create')
-  @UseGuards(BearerAuthGuard)
+  @MessagePattern('createChat')
   @UseInterceptors(new PlainToClassInterceptor(Chat))
   create(
-    @Auth() auth: TokenPayload,
-    @Payload('payload') createChatDto: CreateChatDto,
+    @Payload('projectId', ParseIntPipe) projectId: number,
+    @Payload() createChatDto: CreateChatDto,
   ) {
-    return this.chatService.create(auth.project.id, createChatDto);
+    return this.chatService.create(projectId, createChatDto);
   }
 
-  @MessagePattern('chats.findAll')
-  @UseGuards(BearerAuthGuard)
+  @MessagePattern('findAllChats')
   @UseInterceptors(new PlainToClassInterceptor(Chat))
   findAll(
-    @Auth() auth: TokenPayload,
-    @Payload('payload') findAllChatsDto: FindAllChatsDto,
+    @Payload('projectId', ParseIntPipe) projectId: number,
+    @Payload() findAllChatsDto: FindAllChatsDto,
   ) {
-    return this.chatService.findAll(auth.project.id, findAllChatsDto);
+    return this.chatService.findAll(projectId, findAllChatsDto);
   }
 
-  @MessagePattern('chats.findOne')
-  @UseGuards(BearerAuthGuard)
+  @MessagePattern('findOneChat')
   @UseInterceptors(new PlainToClassInterceptor(Chat))
   findOne(
-    @Auth() auth: TokenPayload,
-    @Payload('payload', ParseIntPipe) id: number,
+    @Payload('projectId', ParseIntPipe) projectId: number,
+    @Payload() findOneChatDto: FindOneChatDto,
   ) {
-    return this.chatService.findOne(auth.project.id, id);
+    return this.chatService.findOne(projectId, findOneChatDto);
   }
 
-  @MessagePattern('chats.update')
-  @UseGuards(BearerAuthGuard)
+  @MessagePattern('updateChat')
   @UseInterceptors(new PlainToClassInterceptor(Chat))
   update(
-    @Auth() auth: TokenPayload,
-    @Payload('payload') updateChatDto: UpdateChatDto,
+    @Payload('projectId', ParseIntPipe) projectId: number,
+    @Payload() updateChatDto: UpdateChatDto,
   ) {
-    return this.chatService.update(auth.project.id, updateChatDto);
+    return this.chatService.update(projectId, updateChatDto);
   }
 
-  @MessagePattern('remove')
-  @UseGuards(BearerAuthGuard)
+  @MessagePattern('removeChat')
   @UseInterceptors(new PlainToClassInterceptor(Chat))
   remove(
-    @Auth() auth: TokenPayload,
-    @Payload('payload', ParseIntPipe) id: number,
+    @Payload('projectId', ParseIntPipe) projectId: number,
+    @Payload() removeChatDto: RemoveChatDto,
   ) {
-    return this.chatService.remove(auth.project.id, id);
-  }
-
-  @MessagePattern('chats.createMessage')
-  @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new PlainToClassInterceptor(Message))
-  createMessage(
-    @Auth() auth: TokenPayload,
-    @Payload('payload') createMessageDto: CreateMessageDto,
-  ) {
-    return this.messageService.create(auth.project.id, createMessageDto);
-  }
-
-  @MessagePattern('chats.findAllMessages')
-  @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new PlainToClassInterceptor(Message))
-  findAllMessages(
-    @Auth() auth: TokenPayload,
-    @Payload('payload', ParseIntPipe) id: number,
-  ) {
-    return this.messageService.findAll(auth.project.id, id);
-  }
-
-  @MessagePattern('chats.markMessagesAsRead')
-  @UseGuards(BearerAuthGuard)
-  markMessagesAsRead(
-    @Auth() auth: TokenPayload,
-    @Payload('payload') readMessagesDto: ReadMessagesDto,
-  ) {
-    return this.messageService.markAsRead(auth.project.id, readMessagesDto);
-  }
-
-  @MessagePattern('chats.updateMessage')
-  @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new PlainToClassInterceptor(Message))
-  updateMessage(
-    @Auth() auth: TokenPayload,
-    @Payload('payload') updateMessageDto: UpdateMessageDto,
-  ) {
-    return this.messageService.update(auth.project.id, updateMessageDto);
-  }
-
-  @MessagePattern('chats.removeMessage')
-  @UseGuards(BearerAuthGuard)
-  @UseInterceptors(new PlainToClassInterceptor(Message))
-  deleteMessage(
-    @Auth() auth: TokenPayload,
-    @Payload('payload', ParseIntPipe) id: number,
-  ) {
-    return this.messageService.remove(auth.project.id, id);
+    return this.chatService.remove(projectId, removeChatDto);
   }
 }

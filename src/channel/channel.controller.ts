@@ -4,13 +4,9 @@ import {
   Param,
   ParseIntPipe,
   Post,
-  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { Auth } from 'src/auth/auth.decorator';
-import { BearerAuthGuard } from 'src/auth/bearer-auth.guard';
-import { TokenPayload } from 'src/auth/entities/token-payload.entity';
 import { PlainToClassInterceptor } from 'src/shared/interceptors/plain-to-class.interceptor';
 import { ChannelService } from './channel.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
@@ -21,51 +17,48 @@ import { Channel } from './entities/channel.entity';
 export class ChannelController {
   constructor(private readonly channelService: ChannelService) {}
 
-  @MessagePattern('channels.create')
-  @UseGuards(BearerAuthGuard)
+  @MessagePattern('createChannel')
   @UseInterceptors(new PlainToClassInterceptor(Channel))
   create(
-    @Auth() auth: TokenPayload,
-    @Payload('payload') createChannelDto: CreateChannelDto,
+    @Payload('projectId', ParseIntPipe) projectId: number,
+    @Payload() createChannelDto: CreateChannelDto,
   ): Promise<Channel> {
-    return this.channelService.create(auth.project.id, createChannelDto);
+    return this.channelService.create(projectId, createChannelDto);
   }
 
-  @MessagePattern('channels.findAll')
-  @UseGuards(BearerAuthGuard)
+  @MessagePattern('findAllChannels')
   @UseInterceptors(new PlainToClassInterceptor(Channel))
-  findAll(@Auth() auth: TokenPayload): Promise<Channel[]> {
-    return this.channelService.findAll(auth.project.id);
+  findAll(
+    @Payload('projectId', ParseIntPipe) projectId: number,
+  ): Promise<Channel[]> {
+    return this.channelService.findAll(projectId);
   }
 
-  @MessagePattern('channels.findOne')
-  @UseGuards(BearerAuthGuard)
+  @MessagePattern('findOneChannel')
   @UseInterceptors(new PlainToClassInterceptor(Channel))
   findOne(
-    @Auth() auth: TokenPayload,
-    @Payload('payload', ParseIntPipe) id: number,
+    @Payload('projectId', ParseIntPipe) projectId: number,
+    @Payload('id', ParseIntPipe) id: number,
   ): Promise<Channel> {
-    return this.channelService.findOne(auth.project.id, id);
+    return this.channelService.findOne(projectId, id);
   }
 
-  @MessagePattern('channels.update')
-  @UseGuards(BearerAuthGuard)
+  @MessagePattern('updateChannel')
   @UseInterceptors(new PlainToClassInterceptor(Channel))
   update(
-    @Auth() auth: TokenPayload,
-    @Payload('payload') updateChannelDto: UpdateChannelDto,
+    @Payload('projectId', ParseIntPipe) projectId: number,
+    @Payload() updateChannelDto: UpdateChannelDto,
   ): Promise<Channel> {
-    return this.channelService.update(auth.project.id, updateChannelDto);
+    return this.channelService.update(projectId, updateChannelDto);
   }
 
-  @MessagePattern('channels.remove')
-  @UseGuards(BearerAuthGuard)
+  @MessagePattern('removeChannel')
   @UseInterceptors(new PlainToClassInterceptor(Channel))
   remove(
-    @Auth() auth: TokenPayload,
-    @Payload('payload', ParseIntPipe) id: number,
+    @Payload('projectId', ParseIntPipe) projectId: number,
+    @Payload('id', ParseIntPipe) id: number,
   ): Promise<Channel> {
-    return this.channelService.remove(auth.project.id, id);
+    return this.channelService.remove(projectId, id);
   }
 
   @Post(':id/webhook')

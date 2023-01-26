@@ -24,33 +24,27 @@ enum ChannelStatus {
 }
 
 model Channel {
-  id        Int           @id @default(autoincrement())
-  projectId Int
-  name      String
-  type      ChannelType
-  status    ChannelStatus
-  accountId String?       @unique
-  token     Json
-  chats     Chat[]
-  approval  Approval[]
+  id           Int           @id @default(autoincrement())
+  projectId    Int
+  type         ChannelType
+  name         String
+  accountId    String        @unique
+  token        Json
+  status       ChannelStatus
+  failedReason String?
+  chats        Chat[]
+  approval     Approval[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
   @@unique([projectId, id])
   @@index([projectId])
-  @@index([projectId, type])
-}
-
-model Contact {
-  chatId    Int     @id
-  chat      Chat    @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  name      String
-  avatarUrl String?
 }
 
 model Chat {
-  id          Int       @id @default(autoincrement())
+  projectId   Int
   channelId   Int
   channel     Channel   @relation(fields: [channelId], references: [id])
-  contact     Contact?
   accountId   String
   isNew       Boolean   @default(true)
   unreadCount Int       @default(0)
@@ -58,7 +52,8 @@ model Chat {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
-  @@unique([channelId, accountId])
+  @@id([channelId, accountId])
+  @@unique([projectId, channelId, accountId])
 }
 
 enum MessageStatus {
@@ -69,17 +64,22 @@ enum MessageStatus {
 }
 
 model Message {
-  id         Int           @id @default(autoincrement())
-  chatId     Int
-  chat       Chat          @relation(fields: [chatId], references: [id], onDelete: Cascade)
-  fromMe     Boolean
-  status     MessageStatus
-  externalId String
-  content    Content[]
-  createdAt  DateTime      @default(now())
-  updatedAt  DateTime      @updatedAt
+  id           Int           @id @default(autoincrement())
+  projectId    Int
+  channelId    Int
+  accountId    String
+  chat         Chat          @relation(fields: [channelId, accountId], references: [channelId, accountId], onDelete: Cascade)
+  fromMe       Boolean
+  status       MessageStatus
+  failedReason String?
+  externalId   String
+  content      Content[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 
-  @@unique([chatId, externalId])
+  @@unique([projectId, channelId, accountId, id])
+  @@unique([channelId, accountId, id])
+  @@unique([channelId, accountId, externalId])
 }
 
 model Content {
@@ -133,9 +133,9 @@ enum ApprovalStatus {
 
 model Approval {
   channelId      Int
-  channel        Channel        @relation(fields: [channelId], references: [id])
+  channel        Channel        @relation(fields: [channelId], references: [id], onDelete: Cascade)
   hsmId          Int
-  hsm            Hsm            @relation(fields: [hsmId], references: [id])
+  hsm            Hsm            @relation(fields: [hsmId], references: [id], onDelete: Cascade)
   externalId     String?
   status         ApprovalStatus
   rejectedReason String?

@@ -1,18 +1,13 @@
 import Prisma from '@prisma/client';
 import { Exclude, Type } from 'class-transformer';
-import { Contact } from './contact.entity';
-import { Message } from './message.entity';
+import { Message } from 'src/message/entities/message.entity';
 
 export class Chat implements Prisma.Chat {
-  id: number;
+  @Exclude({ toPlainOnly: true })
+  projectId: number;
 
-  @Exclude()
   channelId: number;
 
-  @Type(() => Contact)
-  contact: Contact;
-
-  @Exclude({ toPlainOnly: true })
   accountId: string;
 
   isNew: boolean;

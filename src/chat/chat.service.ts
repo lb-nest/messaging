@@ -1,7 +1,10 @@
 import { Injectable } from '@nestjs/common';
+import { PrismaPromise } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { FindAllChatsDto } from './dto/find-all-chats.dto';
+import { FindOneChatDto } from './dto/find-one-chat.dto';
+import { RemoveChatDto } from './dto/remove-chat.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 import { Chat } from './entities/chat.entity';
 
@@ -9,9 +12,17 @@ import { Chat } from './entities/chat.entity';
 export class ChatService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  create(projectId: number, createChatDto: CreateChatDto): Promise<Chat> {
-    return this.prismaService.chat.create({
-      data: {
+  async create(projectId: number, createChatDto: CreateChatDto): Promise<Chat> {
+    return this.prismaService.chat.upsert({
+      where: {
+        projectId_channelId_accountId: {
+          projectId,
+          channelId: createChatDto.channelId,
+          accountId: createChatDto.accountId,
+        },
+      },
+      create: {
+        projectId,
         channel: {
           connect: {
             projectId_id: {
@@ -21,15 +32,9 @@ export class ChatService {
           },
         },
         accountId: createChatDto.accountId,
-        contact: {
-          create: {
-            name: createChatDto.name,
-            avatarUrl: createChatDto.avatarUrl,
-          },
-        },
       },
+      update: {},
       include: {
-        contact: true,
         messages: {
           orderBy: {
             id: 'desc',
@@ -54,18 +59,15 @@ export class ChatService {
   findAll(
     projectId: number,
     findAllChatsDto: FindAllChatsDto,
-  ): Promise<Chat[]> {
+  ): PrismaPromise<Chat[]> {
     return this.prismaService.chat.findMany({
       where: {
-        id: {
-          in: findAllChatsDto.ids,
-        },
-        channel: {
-          projectId,
+        projectId,
+        accountId: {
+          in: findAllChatsDto.accountIds,
         },
       },
       include: {
-        contact: true,
         messages: {
           orderBy: {
             id: 'desc',
@@ -87,55 +89,51 @@ export class ChatService {
     });
   }
 
-  findOne(projectId: number, id: number): Promise<Chat> {
-    return this.prismaService.chat.findFirstOrThrow({
-      where: {
-        id,
-        channel: {
-          projectId,
-        },
-      },
-      include: {
-        contact: true,
-        messages: {
-          orderBy: {
-            id: 'desc',
-          },
-          take: 1,
-          include: {
-            content: {
-              orderBy: {
-                id: 'desc',
-              },
-              take: 1,
-              include: {
-                attachments: true,
-              },
-            },
-          },
-        },
-      },
-    });
-  }
-
-  async update(
+  findOne(
     projectId: number,
-    { id, accountId, ...updateChatDto }: UpdateChatDto,
-  ): Promise<Chat> {
-    const chat = await this.findOne(projectId, id);
+    findOneChatDto: FindOneChatDto,
+  ): PrismaPromise<Chat> {
+    return this.prismaService.chat.findUniqueOrThrow({
+      where: {
+        projectId_channelId_accountId: {
+          projectId,
+          channelId: findOneChatDto.channelId,
+          accountId: findOneChatDto.accountId,
+        },
+      },
+      include: {
+        messages: {
+          orderBy: {
+            id: 'desc',
+          },
+          take: 1,
+          include: {
+            content: {
+              orderBy: {
+                id: 'desc',
+              },
+              take: 1,
+              include: {
+                attachments: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
 
+  async update(projectId: number, updateChatDto: UpdateChatDto): Promise<Chat> {
     return this.prismaService.chat.update({
       where: {
-        id: chat.id,
-      },
-      data: {
-        accountId,
-        contact: {
-          update: updateChatDto,
+        projectId_channelId_accountId: {
+          projectId,
+          channelId: updateChatDto.channelId,
+          accountId: updateChatDto.accountId,
         },
       },
+      data: updateChatDto,
       include: {
-        contact: true,
         messages: {
           orderBy: {
             id: 'desc',
@@ -157,25 +155,16 @@ export class ChatService {
     });
   }
 
-  async remove(projectId: number, id: number): Promise<Chat> {
-    const chat = await this.prismaService.chat.findFirstOrThrow({
-      where: {
-        id,
-        channel: {
-          projectId,
-        },
-      },
-      select: {
-        id: true,
-      },
-    });
-
+  async remove(projectId: number, removeChatDto: RemoveChatDto): Promise<Chat> {
     return this.prismaService.chat.delete({
       where: {
-        id: chat.id,
+        projectId_channelId_accountId: {
+          projectId,
+          channelId: removeChatDto.channelId,
+          accountId: removeChatDto.accountId,
+        },
       },
       include: {
-        contact: true,
         messages: {
           orderBy: {
             id: 'desc',

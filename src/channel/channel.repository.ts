@@ -16,9 +16,9 @@ import { WhatsappChannel } from './whatsapp.channel';
 export class ChannelRepository {
   constructor(
     private readonly configService: ConfigService,
-    @Inject(BACKEND) private readonly client: ClientProxy,
     private readonly prismaService: PrismaService,
     private readonly s3Service: S3Service,
+    @Inject(BACKEND) private readonly client: ClientProxy,
   ) {}
 
   private [ChannelType.Instagram] = InstagramChannel;

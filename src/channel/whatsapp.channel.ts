@@ -5,9 +5,9 @@ import axios from 'axios';
 import merge from 'deepmerge';
 import { CreateChannelDto } from 'src/channel/dto/create-channel.dto';
 import { Channel } from 'src/channel/entities/channel.entity';
-import { CreateMessageDto } from 'src/chat/dto/create-message.dto';
-import { MessageWithChatId } from 'src/chat/entities/message-with-chat-id.entity';
-import { ButtonType } from 'src/chat/enums/button-type.enum';
+import { CreateMessageDto } from 'src/message/dto/create-message.dto';
+import { Message } from 'src/message/entities/message.entity';
+import { ButtonType } from 'src/message/enums/button-type.enum';
 import { AbstractChannel } from './abstract.channel';
 
 export class WhatsappChannel extends AbstractChannel {
@@ -82,7 +82,7 @@ export class WhatsappChannel extends AbstractChannel {
     channel: Prisma.Channel,
     chat: Prisma.Chat,
     message: CreateMessageDto,
-  ): Promise<MessageWithChatId[]> {
+  ): Promise<Message[]> {
     if (typeof message.hsmId === 'number') {
       return [
         await this.sendHsm(channel, chat, message.hsmId, message.variables),
@@ -131,7 +131,9 @@ export class WhatsappChannel extends AbstractChannel {
           }
 
           messages.push({
-            chatId: chat.id,
+            projectId: chat.projectId,
+            channelId: chat.channelId,
+            accountId: chat.accountId,
             externalId: await api.sendMessage(chat.accountId, msg),
             fromMe: true,
             status: Prisma.MessageStatus.Submitted,
@@ -163,7 +165,9 @@ export class WhatsappChannel extends AbstractChannel {
       };
 
       messages.push({
-        chatId: chat.id,
+        projectId: chat.projectId,
+        channelId: chat.channelId,
+        accountId: chat.accountId,
         externalId: await api.sendMessage(chat.accountId, msg),
         fromMe: true,
         status: Prisma.MessageStatus.Submitted,
@@ -179,10 +183,11 @@ export class WhatsappChannel extends AbstractChannel {
     return Promise.all(
       messages.map(async ({ content, externalId }) =>
         super.createMessage(
-          chat.id,
-          Prisma.MessageStatus.Submitted,
-          content,
+          chat,
           externalId,
+          content,
+          Prisma.MessageStatus.Submitted,
+          true,
         ),
       ),
     );
@@ -197,7 +202,7 @@ export class WhatsappChannel extends AbstractChannel {
     chat: Prisma.Chat,
     hsmId: number,
     variables: Record<string, string> = {},
-  ): Promise<MessageWithChatId> {
+  ): Promise<Message> {
     const api = new GupshupPartnerApi(
       this.configService.get<string>('GS_USER'),
       this.configService.get<string>('GS_PASS'),
@@ -238,8 +243,8 @@ export class WhatsappChannel extends AbstractChannel {
     );
 
     return super.createMessage(
-      chat.id,
-      Prisma.MessageStatus.Submitted,
+      chat,
+      externalId,
       {
         create: {
           text: approval.hsm.text,
@@ -251,7 +256,8 @@ export class WhatsappChannel extends AbstractChannel {
           buttons: approval.hsm.buttons,
         },
       },
-      externalId,
+      Prisma.MessageStatus.Submitted,
+      true,
     );
   }
 
@@ -355,37 +361,40 @@ export class WhatsappChannel extends AbstractChannel {
     channel: Prisma.Channel,
     event: any,
   ): Promise<void> {
-    const chat = await this.createChat(channel.id, event.payload.source, {
-      create: {
-        name: event.payload.sender.name,
-      },
-    });
+    const chat = await this.createChat(
+      channel.projectId,
+      channel.id,
+      event.payload.source,
+    );
 
     const message = await this.createMessage(
-      chat.id,
-      Prisma.MessageStatus.Submitted,
+      chat,
+      event.payload.id,
       {
         create: await this.createContent(event),
       },
-      event.payload.id,
+      Prisma.MessageStatus.Submitted,
     );
 
-    this.client.emit('chats.received', {
+    this.client.emit('receiveChat', {
       projectId: channel.projectId,
-      payload: merge.all([
+      chat: merge(
         chat,
         {
           contact: {
-            whatsappId: chat.accountId,
+            name: 'N/A',
           },
           messages: [message],
         },
-      ]),
+        {
+          arrayMerge: (_, source) => source,
+        },
+      ),
     });
 
-    this.client.emit('messages.received', {
+    this.client.emit('receiveMessage', {
       projectId: channel.projectId,
-      payload: message,
+      message,
     });
   }
 

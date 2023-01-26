@@ -10,5 +10,6 @@ import { ChannelService } from './channel.service';
   imports: [forwardRef(() => AppModule)],
   controllers: [ChannelController],
   providers: [PrismaService, S3Service, ChannelRepository, ChannelService],
+  exports: [ChannelRepository],
 })
 export class ChannelModule {}

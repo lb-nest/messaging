@@ -1,7 +1,7 @@
-import { IsInt, IsOptional } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class FindAllChatsDto {
   @IsOptional()
-  @IsInt({ each: true })
-  ids?: number[];
+  @IsString({ each: true })
+  accountIds?: string[];
 }

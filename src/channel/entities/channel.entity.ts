@@ -7,15 +7,21 @@ export class Channel implements Prisma.Channel {
   @Exclude()
   projectId: number;
 
-  name: string;
-
   type: Prisma.ChannelType;
 
-  status: Prisma.ChannelStatus;
+  name: string;
 
   @Exclude()
-  accountId: string | null;
+  accountId: string;
 
   @Exclude()
   token: any;
+
+  status: Prisma.ChannelStatus;
+
+  failedReason: string | null;
+
+  createdAt: Date;
+
+  updatedAt: Date;
 }

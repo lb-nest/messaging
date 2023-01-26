@@ -21,10 +21,11 @@ async function bootstrap() {
   prismaService.enableShutdownHooks(app);
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   const configService = app.get(ConfigService);
 
-  const microservice = app.connectMicroservice<MicroserviceOptions>(
+  app.connectMicroservice<MicroserviceOptions>(
     {
       transport: Transport.RMQ,
       options: {
@@ -36,8 +37,6 @@ async function bootstrap() {
       inheritAppConfig: true,
     },
   );
-
-  microservice.useGlobalFilters(new GlobalExceptionFilter());
 
   await app.startAllMicroservices();
   await app.listen(configService.get<number>('PORT'), '0.0.0.0');

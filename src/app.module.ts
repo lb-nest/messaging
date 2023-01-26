@@ -3,10 +3,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import Joi from 'joi';
-import { AuthModule } from './auth/auth.module';
 import { ChannelModule } from './channel/channel.module';
 import { ChatModule } from './chat/chat.module';
 import { HsmModule } from './hsm/hsm.module';
+import { MessageModule } from './message/message.module';
 import { PrismaService } from './prisma.service';
 import { BACKEND } from './shared/constants/broker';
 
@@ -41,10 +41,10 @@ import { BACKEND } from './shared/constants/broker';
         inject: [ConfigService],
       },
     ]),
-    AuthModule,
     ChannelModule,
     ChatModule,
     HsmModule,
+    MessageModule,
   ],
   providers: [
     PrismaService,
@@ -53,6 +53,6 @@ import { BACKEND } from './shared/constants/broker';
       useClass: ClassSerializerInterceptor,
     },
   ],
-  exports: [ClientsModule],
+  exports: [ClientsModule, ChannelModule],
 })
 export class AppModule {}

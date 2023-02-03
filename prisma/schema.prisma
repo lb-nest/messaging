@@ -28,7 +28,7 @@ model Channel {
   projectId    Int
   type         ChannelType
   name         String
-  accountId    String        @unique
+  accountId    String
   token        Json
   status       ChannelStatus
   failedReason String?

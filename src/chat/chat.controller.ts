@@ -1,6 +1,5 @@
-import { Controller, ParseIntPipe, UseInterceptors } from '@nestjs/common';
+import { Controller, ParseIntPipe, SerializeOptions } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { PlainToClassInterceptor } from 'src/shared/interceptors/plain-to-class.interceptor';
 import { ChatService } from './chat.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { FindAllChatsDto } from './dto/find-all-chats.dto';
@@ -9,52 +8,50 @@ import { RemoveChatDto } from './dto/remove-chat.dto';
 import { UpdateChatDto } from './dto/update-chat.dto';
 import { Chat } from './entities/chat.entity';
 
+@SerializeOptions({
+  type: Chat,
+})
 @Controller()
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
   @MessagePattern('createChat')
-  @UseInterceptors(new PlainToClassInterceptor(Chat))
   create(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() createChatDto: CreateChatDto,
-  ) {
+  ): Promise<Chat> {
     return this.chatService.create(projectId, createChatDto);
   }
 
   @MessagePattern('findAllChats')
-  @UseInterceptors(new PlainToClassInterceptor(Chat))
   findAll(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() findAllChatsDto: FindAllChatsDto,
-  ) {
+  ): Promise<Chat[]> {
     return this.chatService.findAll(projectId, findAllChatsDto);
   }
 
   @MessagePattern('findOneChat')
-  @UseInterceptors(new PlainToClassInterceptor(Chat))
   findOne(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() findOneChatDto: FindOneChatDto,
-  ) {
+  ): Promise<Chat> {
     return this.chatService.findOne(projectId, findOneChatDto);
   }
 
   @MessagePattern('updateChat')
-  @UseInterceptors(new PlainToClassInterceptor(Chat))
   update(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() updateChatDto: UpdateChatDto,
-  ) {
+  ): Promise<Chat> {
     return this.chatService.update(projectId, updateChatDto);
   }
 
   @MessagePattern('removeChat')
-  @UseInterceptors(new PlainToClassInterceptor(Chat))
   remove(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() removeChatDto: RemoveChatDto,
-  ) {
+  ): Promise<Chat> {
     return this.chatService.remove(projectId, removeChatDto);
   }
 }

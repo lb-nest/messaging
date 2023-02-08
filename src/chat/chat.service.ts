@@ -12,7 +12,10 @@ import { Chat } from './entities/chat.entity';
 export class ChatService {
   constructor(private readonly prismaService: PrismaService) {}
 
-  async create(projectId: number, createChatDto: CreateChatDto): Promise<Chat> {
+  create(
+    projectId: number,
+    createChatDto: CreateChatDto,
+  ): Prisma.PrismaPromise<Chat> {
     return this.prismaService.chat.upsert({
       where: {
         projectId_channelId_accountId: {
@@ -123,7 +126,10 @@ export class ChatService {
     });
   }
 
-  async update(projectId: number, updateChatDto: UpdateChatDto): Promise<Chat> {
+  update(
+    projectId: number,
+    updateChatDto: UpdateChatDto,
+  ): Prisma.PrismaPromise<Chat> {
     return this.prismaService.chat.update({
       where: {
         projectId_channelId_accountId: {
@@ -155,7 +161,10 @@ export class ChatService {
     });
   }
 
-  async remove(projectId: number, removeChatDto: RemoveChatDto): Promise<Chat> {
+  remove(
+    projectId: number,
+    removeChatDto: RemoveChatDto,
+  ): Prisma.PrismaPromise<Chat> {
     return this.prismaService.chat.delete({
       where: {
         projectId_channelId_accountId: {

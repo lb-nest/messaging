@@ -1,11 +1,10 @@
 import {
   Controller,
   ParseIntPipe,
+  SerializeOptions,
   UseGuards,
-  UseInterceptors,
 } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { PlainToClassInterceptor } from 'src/shared/interceptors/plain-to-class.interceptor';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { FindAllMessagesDto } from './dto/find-all-messages.dto';
 import { FindOneMessageDto } from './dto/find-one-message.dto';
@@ -15,13 +14,15 @@ import { Message } from './entities/message.entity';
 import { MessagingLimitGuard } from './guards/messaging-limit.guard';
 import { MessageService } from './message.service';
 
+@SerializeOptions({
+  type: Message,
+})
 @Controller()
 export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 
   @MessagePattern('createMessage')
   @UseGuards(MessagingLimitGuard)
-  @UseInterceptors(new PlainToClassInterceptor(Message))
   create(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() createMessageDto: CreateMessageDto,
@@ -30,7 +31,6 @@ export class MessageController {
   }
 
   @MessagePattern('findAllMessages')
-  @UseInterceptors(new PlainToClassInterceptor(Message))
   findAll(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() findAllMessagesDto: FindAllMessagesDto,
@@ -39,7 +39,6 @@ export class MessageController {
   }
 
   @MessagePattern('findOneMessage')
-  @UseInterceptors(new PlainToClassInterceptor(Message))
   findOne(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() findOneMessageDto: FindOneMessageDto,
@@ -49,7 +48,6 @@ export class MessageController {
 
   @MessagePattern('updateMessage')
   @UseGuards(MessagingLimitGuard)
-  @UseInterceptors(new PlainToClassInterceptor(Message))
   update(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() updateMessageDto: UpdateMessageDto,
@@ -59,7 +57,6 @@ export class MessageController {
 
   @MessagePattern('removeMessage')
   @UseGuards(MessagingLimitGuard)
-  @UseInterceptors(new PlainToClassInterceptor(Message))
   remove(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() removeMessageDto: RemoveMessageDto,

@@ -4,10 +4,9 @@ import {
   Param,
   ParseIntPipe,
   Post,
-  UseInterceptors,
+  SerializeOptions,
 } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { PlainToClassInterceptor } from 'src/shared/interceptors/plain-to-class.interceptor';
 import { ChannelService } from './channel.service';
 import { CreateChannelDto } from './dto/create-channel.dto';
 import { UpdateChannelDto } from './dto/update-channel.dto';
@@ -17,8 +16,10 @@ import { Channel } from './entities/channel.entity';
 export class ChannelController {
   constructor(private readonly channelService: ChannelService) {}
 
+  @SerializeOptions({
+    type: Channel,
+  })
   @MessagePattern('createChannel')
-  @UseInterceptors(new PlainToClassInterceptor(Channel))
   create(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() createChannelDto: CreateChannelDto,
@@ -26,16 +27,20 @@ export class ChannelController {
     return this.channelService.create(projectId, createChannelDto);
   }
 
+  @SerializeOptions({
+    type: Channel,
+  })
   @MessagePattern('findAllChannels')
-  @UseInterceptors(new PlainToClassInterceptor(Channel))
   findAll(
     @Payload('projectId', ParseIntPipe) projectId: number,
   ): Promise<Channel[]> {
     return this.channelService.findAll(projectId);
   }
 
+  @SerializeOptions({
+    type: Channel,
+  })
   @MessagePattern('findOneChannel')
-  @UseInterceptors(new PlainToClassInterceptor(Channel))
   findOne(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload('id', ParseIntPipe) id: number,
@@ -43,8 +48,10 @@ export class ChannelController {
     return this.channelService.findOne(projectId, id);
   }
 
+  @SerializeOptions({
+    type: Channel,
+  })
   @MessagePattern('updateChannel')
-  @UseInterceptors(new PlainToClassInterceptor(Channel))
   update(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() updateChannelDto: UpdateChannelDto,
@@ -52,8 +59,10 @@ export class ChannelController {
     return this.channelService.update(projectId, updateChannelDto);
   }
 
+  @SerializeOptions({
+    type: Channel,
+  })
   @MessagePattern('removeChannel')
-  @UseInterceptors(new PlainToClassInterceptor(Channel))
   remove(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload('id', ParseIntPipe) id: number,

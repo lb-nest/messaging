@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaPromise } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from 'src/prisma.service';
 import { CreateChatDto } from './dto/create-chat.dto';
 import { FindAllChatsDto } from './dto/find-all-chats.dto';
@@ -59,7 +59,7 @@ export class ChatService {
   findAll(
     projectId: number,
     findAllChatsDto: FindAllChatsDto,
-  ): PrismaPromise<Chat[]> {
+  ): Prisma.PrismaPromise<Chat[]> {
     return this.prismaService.chat.findMany({
       where: {
         projectId,
@@ -92,7 +92,7 @@ export class ChatService {
   findOne(
     projectId: number,
     findOneChatDto: FindOneChatDto,
-  ): PrismaPromise<Chat> {
+  ): Prisma.PrismaPromise<Chat> {
     return this.prismaService.chat.findUniqueOrThrow({
       where: {
         projectId_channelId_accountId: {

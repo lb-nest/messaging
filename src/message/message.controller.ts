@@ -1,9 +1,4 @@
-import {
-  Controller,
-  ParseIntPipe,
-  SerializeOptions,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, ParseIntPipe, SerializeOptions } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { FindAllMessagesDto } from './dto/find-all-messages.dto';
@@ -11,7 +6,6 @@ import { FindOneMessageDto } from './dto/find-one-message.dto';
 import { RemoveMessageDto } from './dto/remove-message.dto';
 import { UpdateMessageDto } from './dto/update-message.dto';
 import { Message } from './entities/message.entity';
-import { MessagingLimitGuard } from './guards/messaging-limit.guard';
 import { MessageService } from './message.service';
 
 @SerializeOptions({
@@ -22,7 +16,6 @@ export class MessageController {
   constructor(private readonly messageService: MessageService) {}
 
   @MessagePattern('createMessage')
-  @UseGuards(MessagingLimitGuard)
   create(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() createMessageDto: CreateMessageDto,
@@ -47,7 +40,6 @@ export class MessageController {
   }
 
   @MessagePattern('updateMessage')
-  @UseGuards(MessagingLimitGuard)
   update(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() updateMessageDto: UpdateMessageDto,
@@ -56,7 +48,6 @@ export class MessageController {
   }
 
   @MessagePattern('removeMessage')
-  @UseGuards(MessagingLimitGuard)
   remove(
     @Payload('projectId', ParseIntPipe) projectId: number,
     @Payload() removeMessageDto: RemoveMessageDto,
